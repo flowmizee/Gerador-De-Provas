@@ -52,7 +52,7 @@
             vertical-align: middle;
             border-bottom: 1px solid currentColor;
             margin-left: 0.5rem;
-            min-width: 150px;
+            min-width: 150px; /* Ajustado para a visualização na tela */
         }
 
         .short-line {
@@ -544,32 +544,30 @@
     /** Renderiza o conteúdo da prova para exportação. */
     function renderPrintableContent() {
         const targetEl = document.getElementById('print-area');
-        let htmlContent = '';
-
-        // Renderiza o cabeçalho para impressão
+        
+        // Crie o HTML do cabeçalho com base no estado atual da UI
         const logoHtml = state.header.logo ? `<div class="flex-shrink-0"><img src="${state.header.logo}" class="h-20 w-auto object-contain mr-4"></div>` : '';
         const headerHtml = `
             <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-400">
                 ${logoHtml}
                 <div class="${state.header.alignment} text-lg flex-grow">
                     <div class="font-bold">${state.header.schoolName}</div>
-                    <div class="font-bold">Aluno(a): <span style="border-bottom: 1px solid black; display: inline-block; width: 300px;"></span></div>
-                    <div class="font-bold">${state.header.teacher}</div>
-                    <div class="font-bold">${state.header.subject}</div>
+                    <div class="font-bold">Aluno(a): <span style="border-bottom: 1px solid black; display: inline-block; width: 550px;"></span></div>
+                    <div class="font-bold">${document.querySelector('[data-key="teacher"]').textContent}</div>
+                    <div class="font-bold">${document.querySelector('[data-key="subject"]').textContent}</div>
                     <div class="font-bold">Ano/Turma: <span style="border-bottom: 1px solid black; display: inline-block; width: 100px;"></span> Data: <span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span>/<span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span>/<span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span></div>
                 </div>
             </div>
         `;
-        htmlContent += headerHtml;
-        
+
         // Renderiza o título da prova
         const titleHtml = `<div class="text-center font-bold text-xl mb-4">${state.examTitle}</div>`;
-        htmlContent += titleHtml;
-
+        
         // Renderiza as questões
+        let questionsHtml = '';
         state.questions.forEach((q, index) => {
             const questionNumber = index + 1;
-            const questionHtml = `
+            questionsHtml += `
                 <div class="question-container mb-6">
                     <p class="mb-2 text-base leading-relaxed">
                         <span class="font-bold mr-2">${questionNumber}.</span>${q.text}
@@ -579,10 +577,9 @@
                     ${Array(q.lines).fill().map(() => `<div class="question-line"></div>`).join('')}
                 </div>
             `;
-            htmlContent += questionHtml;
         });
         
-        targetEl.innerHTML = htmlContent;
+        targetEl.innerHTML = headerHtml + titleHtml + questionsHtml;
     }
 
     /** Exporta o conteúdo para PDF. */
