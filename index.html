@@ -1,1220 +1,489 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Gerador de Provas — Flowmize</title>
-
 <!--
-README (no topo do arquivo)
----------------------------
-Arquivo: index.html
-O que é:
-  Aplicativo web "Gerador de Provas" (único arquivo, sem backend). Permite criar, editar,
-  visualizar e imprimir provas em A4 (portrait). Tudo salvo em localStorage.
+README RÁPIDO: Gerador de Provas (único arquivo HTML)
+Como usar:
+1. Abra este arquivo no navegador (duplo clique). Tudo funciona sem backend.
+2. Cabeçalho: faça upload/arraste a logo para a área à esquerda. Ajuste a altura do logo com o slider. Edite campos (clique e digite). Escolha alinhamento do cabeçalho (esquerda/central/direita).
+3. Questões: cole várias questões na área "Colar questões" e clique em "Analisar e gerar". Você também pode adicionar questões manualmente.
+   - Em cada questão: editar texto, definir linhas de resposta (1-5), arrastar/soltar imagem direto na questão ou usar o botão de upload, ajustar tamanho da imagem, duplicar, remover e mover para cima/baixo.
+4. Visualização: use a aba "Preview/A4" para ver como ficará impresso. Clique em "Exportar PDF" para salvar (usa html2pdf.js via CDN). Há opção "Exportar Gabarito" para gerar um PDF com as respostas marcadas.
+5. Tudo é salvo automaticamente no localStorage. Use "Limpar prova" para resetar.
+Extras:
+- Tema Claro/Escuro
+- Detecção de alternativas (A, B, C...) ao detectar padrões no texto
+- Gabarito: marque as alternativas corretas na edição da questão (se for de múltipla escolha)
 
-Como usar (resumo rápido):
-  1. Edite o cabeçalho da prova clicando nos campos (edição inline).
-  2. Cole várias questões no campo "Colar/colocar questões" e clique em "Analisar e gerar".
-     O sistema detecta numeração (1, 1., 1 -), gera questões editáveis e tenta detectar
-     alternativas (A, B, C...). Você também pode "Adicionar questão manual".
-  3. Em cada questão:
-     - Edite texto inline;
-     - Escolha número de linhas de resposta (1-5);
-     - Adicione imagem (arrastar/soltar ou botão);
-     - Ajuste tamanho da imagem (slider);
-     - Marque gabarito (se houver alternativas, selecione a(s) correta(s));
-     - Duplicar/remover/reordenar.
-  4. Visualize na prévia A4 e clique em "Exportar PDF" (usa html2pdf.js).
-     - Arquivo: Prova_{Componente}_{YYYY-MM-DD}.pdf
-     - Opções: exportar prova normal, exportar prova + gabarito separado.
-  5. Tudo é salvo automaticamente no localStorage.
-  6. "Limpar prova" reseta tudo.
+OBS: O código está comentado em português e modularizado no próprio arquivo. Sem dependências externas além do CDN html2pdf.js.
+--><!doctype html>
 
-Extras implementados:
-  - Tema claro/escuro que também afeta o PDF.
-  - Detecção automática de alternativas A,B,C... no texto colado.
-  - Gabarito: marcar respostas corretas e exportar PDF do gabarito separadamente.
-  - Mensagens de erro amigáveis (ex.: imagem > 5MB).
-  - Layout responsivo, acessível, com navegação por tab.
-  
-Dependência externa (apenas):
-  - html2pdf.js via CDN (html2pdf.bundle.min.js)
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gerador de Provas — Flowmize</title>
+  <!-- html2pdf CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f7fb; --card:#ffffff; --accent:#0b63d6; --text:#122028; --muted:#586a74;
+      --print-line:1.5px;
+    }
+    [data-theme='dark']{
+      --bg:#0f1720; --card:#0b1116; --accent:#38bdf8; --text:#e6eef6; --muted:#9fb6c9;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); color:var(--text);}
+    .app{min-height:100vh;display:flex;gap:18px;padding:18px}
+    /* Sidebar */
+    .sidebar{width:360px;max-width:40%;background:linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2));border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.08)}
+    .controls h2{margin:0 0 8px 0;font-size:18px}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:12px}
+    input[type='text'], select, textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d5e1ea;background:transparent;font-size:14px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(0,0,0,0.08)}
+    .row{display:flex;gap:8px;align-items:center}
+    .muted{color:var(--muted);font-size:13px}
+    .logo-drop{height:96px;border-radius:8px;border:2px dashed rgba(18,32,40,0.08);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2))}
+    .logo-drop img{max-height:90px;max-width:100%;object-fit:contain}
+    .field-inline{display:flex;flex-direction:column;gap:6px}
+    .small{font-size:12px}/* Main preview area */
+.main{flex:1;display:flex;flex-direction:column;gap:12px}
+.toolbar{display:flex;gap:8px;align-items:center}
+.preview-wrap{flex:1;display:flex;gap:12px}
+.editor{width:420px;max-width:42%;background:var(--card);border-radius:12px;padding:12px;overflow:auto}
+.preview{flex:1;background:transparent;display:flex;justify-content:center;align-items:flex-start;padding:12px;overflow:auto}
 
-Observações técnicas:
-  - Todo estado é salvo em localStorage em "geradorDeProvas_v1".
-  - Para adaptar para slides no futuro: função renderPreviewToDOM faz a renderização — pode ser reaproveitada.
--->
+/* A4 preview box */
+.a4{
+  background:white;border-radius:6px;padding:20mm;box-shadow:0 6px 30px rgba(2,6,23,0.12);width:210mm;min-height:297mm;max-width:100%;
+  box-sizing:border-box;margin:12px 0
+}
+@media (max-width:1000px){.sidebar{display:none}.editor{width:100%;max-width:100%}.app{padding:12px}.preview-wrap{flex-direction:column}}
 
-<style>
-  :root{
-    --bg: #f5f7fb;
-    --panel: #ffffff;
-    --muted: #6b7280;
-    --accent: #0f62fe;
-    --danger: #ef4444;
-    --text: #0f1724;
-    --paper-bg: #fff;
-  }
-  .dark {
-    --bg: #0b1220;
-    --panel: #071029;
-    --muted: #9aa6b2;
-    --accent: #66a0ff;
-    --danger: #ff7b7b;
-    --text: #e6eef8;
-    --paper-bg: #0b1220;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    background: linear-gradient(180deg, var(--bg), #e9eef8 120%);
-    color:var(--text);
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
-    min-height:100vh;
-    padding:18px;
-  }
-  .app {
-    max-width:1200px;
-    margin:0 auto;
-    display:grid;
-    grid-template-columns: 420px 1fr;
-    gap:18px;
-    align-items:start;
-  }
-  header.app-header{
-    grid-column:1/-1;
-    display:flex;
-    gap:12px;
-    align-items:center;
-    margin-bottom:8px;
-  }
-  h1{font-size:1.15rem;margin:0}
-  .controls{display:flex;gap:8px;align-items:center;margin-left:auto}
-  button, input[type="button"]{cursor:pointer}
-  .card{
-    background:var(--panel);
-    border-radius:12px;
-    padding:12px;
-    box-shadow: 0 6px 18px rgba(12,20,40,0.06);
-    border:1px solid rgba(15,23,36,0.04);
-  }
-  /* Left column */
-  .left{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
-  label.small{font-size:0.8rem;color:var(--muted);display:block;margin-bottom:6px}
-  .inline-edit{
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-  .header-preview{
-    display:grid;
-    grid-template-columns:80px 1fr;
-    gap:12px;
-    align-items:center;
-  }
-  .logo-box{
-    width:80px;height:80px;border-radius:8px;border:1px dashed rgba(0,0,0,0.06);
-    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent);
-    overflow:hidden;
-  }
-  .logo-box img{max-width:100%;max-height:100%;object-fit:contain}
-  .toolbar{display:flex;gap:6px;flex-wrap:wrap}
-  input[type="file"]{display:none}
-  textarea{width:100%;min-height:120px;border-radius:8px;padding:10px;border:1px solid rgba(15,23,36,0.06);resize:vertical}
-  .btn{
-    background:var(--accent);color:white;padding:8px 12px;border-radius:8px;border:none;font-weight:600;
-    box-shadow:0 6px 12px rgba(15,98,254,0.08)
-  }
-  .btn.ghost{background:transparent;color:var(--accent);box-shadow:none;border:1px solid rgba(15,98,254,0.09)}
-  .btn.danger{background:var(--danger)}
-  .small-btn{padding:6px 8px;border-radius:8px;font-size:0.9rem}
-  .muted{color:var(--muted);font-size:0.9rem}
-  .flex{display:flex;gap:8px;align-items:center}
-  .questions-list{display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow:auto;padding-right:6px}
-  .q-card{border-radius:10px;padding:10px;border:1px solid rgba(12,18,28,0.05);display:flex;gap:10px;align-items:flex-start;background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent)}
-  .q-num{font-weight:700;min-width:30px}
-  .q-body{flex:1}
-  .inline-editable{
-    padding:6px;border-radius:6px;border:1px dashed transparent;min-height:36px;
-  }
-  .inline-editable:focus{outline:none;border-color:rgba(15,98,254,0.15);background:linear-gradient(180deg,rgba(15,98,254,0.02),transparent)}
-  .q-actions{display:flex;gap:6px;flex-direction:column}
-  .small{font-size:0.85rem}
-  input[type="range"]{width:100%}
-  .muted-block{color:var(--muted);font-size:0.85rem;margin-top:6px}
-  /* Right column: preview */
-  .right{
-    display:flex;flex-direction:column;gap:12px;
-  }
-  .preview-wrap{
-    display:flex;gap:12px;flex-direction:column;align-items:center;
-  }
-  .a4{
-    width:794px; /* A4 at 96dpi: 794x1123 */
-    max-width:100%;
-    height:1123px;
-    background:var(--paper-bg);
-    box-shadow:0 10px 30px rgba(11,20,40,0.12);
-    border-radius:6px;
-    padding:36px;
-    box-sizing:border-box;
-    overflow:hidden;
-  }
-  @media (max-width:1000px){
-    .app{grid-template-columns:1fr; padding-bottom:60px}
-    .a4{height:auto;min-height:1123px}
-  }
-  .paper-header{display:flex;gap:10px;align-items:center;margin-bottom:10px}
-  .paper-header .logo{width:84px;height:84px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.06)}
-  .paper-header .meta{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .meta .item{font-size:0.95rem}
-  .meta .label{font-weight:700}
-  .paper-body{margin-top:6px}
-  .paper-q{margin-bottom:18px}
-  .paper-q .q-text{margin-bottom:8px}
-  .response-lines{display:flex;flex-direction:column;gap:8px}
-  .response-line{border-bottom:1.5px solid #000;min-height:20px;padding-bottom:6px}
-  /* alternatives */
-  .alt-list{margin-left:12px;display:flex;flex-direction:column;gap:6px}
-  .alt-item{display:flex;gap:8px;align-items:center}
-  .gabarito{color:var(--danger);font-weight:700}
-  /* small utilities */
-  .center{text-align:center}
-  .right-align{text-align:right}
-  .align-controls{display:flex;gap:6px}
-  .hint{font-size:0.82rem;color:var(--muted);margin-top:6px}
-  footer.app-footer{grid-column:1/-1;margin-top:6px;color:var(--muted);font-size:0.9rem;display:flex;justify-content:space-between}
-  .notice{background:linear-gradient(180deg,rgba(255,255,255,0.8),transparent);padding:10px;border-radius:8px;font-size:0.9rem}
-  /* accessibility focus */
-  button:focus, .inline-editable:focus, textarea:focus, input:focus { box-shadow: 0 0 0 3px rgba(15,98,254,0.09); outline:none; }
-  /* dark theme styles adjustments for paper lines visibility */
-  .dark .response-line{border-bottom:1.5px solid #e6eef8}
-  /* small screen */
-  @media (max-width:560px){
-    .left{order:2}
-    .right{order:1}
-    .questions-list{max-height:28vh}
-  }
-</style>
+/* Cabeçalho - layout em linha */
+.prov-cab{display:flex;gap:14px;align-items:center;padding:10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:linear-gradient(180deg, rgba(245,247,250,0.6), rgba(255,255,255,0.4))}
+.cab-left{width:140px;display:flex;align-items:center;justify-content:center}
+.cab-right{flex:1;display:flex;flex-direction:column;gap:6px}
+.cab-info{display:flex;flex-direction:column;gap:4px}
+.cab-info .inline-edit{padding:4px 6px;border-radius:6px}
+.cab-actions{display:flex;gap:6px;align-items:center}
+.align-btn{padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.06);cursor:pointer}
+
+/* Questões */
+.question{border-top:1px dashed rgba(0,0,0,0.06);padding:12px;display:flex;gap:8px;align-items:flex-start}
+.q-left{width:36px;text-align:right;font-weight:600}
+.q-body{flex:1}
+.q-controls{display:flex;gap:6px;align-items:center}
+.q-text{min-height:48px;padding:6px;border-radius:6px}
+.answer-lines{margin-top:8px}
+.answer-line{border-bottom:var(--print-line) solid #000;height:20px;margin:10px 0}
+.q-image{max-width:180px;border-radius:6px;padding:6px;border:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column;gap:6px}
+.q-image img{max-width:100%;height:auto;display:block}
+
+/* footer controls */
+.footer-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+
+/* Print styles */
+@media print{
+  body{background:white}
+  .app, .sidebar, .editor, .toolbar, .footer-actions, .theme-toggle{display:none}
+  .a4{box-shadow:none;padding:12mm}
+}
+
+/* Accessibility focus */
+[contenteditable]:focus{outline:2px solid rgba(11,99,214,0.18)}
+
+  </style>
 </head>
 <body>
-<div class="app" id="app">
-  <header class="app-header">
-    <div>
-      <h1>Gerador de Provas</h1>
-      <div class="muted">Crie, edite e imprima provas em A4 — sem backend. Tudo salvo localmente.</div>
-    </div>
-    <div class="controls">
-      <div class="muted small">Tema</div>
-      <button id="toggleTheme" class="small-btn btn ghost" title="Alternar tema">Escuro / Claro</button>
-      <div style="width:8px"></div>
-      <button id="exportPdfBtn" class="btn small-btn" title="Exportar prova como PDF">Exportar PDF</button>
-      <button id="exportGabaritoBtn" class="btn small-btn ghost" title="Exportar apenas gabarito">Exportar Gabarito</button>
-      <button id="clearBtn" class="small-btn btn danger" title="Limpar prova">Limpar prova</button>
-    </div>
-  </header>
-
-  <!-- Left column: editor controls -->
-  <div class="left">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong>Cabeçalho da prova</strong>
-        <div class="align-controls" aria-label="Alinhamento do cabeçalho">
-          <button class="small-btn ghost" data-align="left" title="Alinhar à esquerda">◀</button>
-          <button class="small-btn ghost" data-align="center" title="Centralizar">•</button>
-          <button class="small-btn ghost" data-align="right" title="Alinhar à direita">▶</button>
-        </div>
-      </div>
-      <div class="header-preview">
-        <label class="logo-box" id="logoDrop" title="Arraste/solte ou clique para enviar logo">
-          <input id="logoInput" type="file" accept="image/*">
-          <span id="logoPlaceholder" class="muted">Logo (arrastar)</span>
-        </label>
-        <div>
-          <div style="display:flex;gap:8px">
-            <div style="flex:1">
-              <div class="small muted">Nome da escola</div>
-              <div class="inline-editable" contenteditable="true" id="fieldSchool">UNIDADE INTEGRADA JOSÉ JOAQUIM DE ARAÚJO</div>
-            </div>
-            <div style="width:140px">
-              <div class="small muted">Data</div>
-              <div class="inline-editable" contenteditable="true" id="fieldDate">____/____/______</div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-            <div>
-              <div class="small muted">Aluno(a)</div>
-              <div class="inline-editable" contenteditable="true" id="fieldStudent">_____________________________________________</div>
-            </div>
-            <div>
-              <div class="small muted">Nota</div>
-              <div class="inline-editable" contenteditable="true" id="fieldGrade">______</div>
-            </div>
-            <div>
-              <div class="small muted">Professor(a)</div>
-              <div class="inline-editable" contenteditable="true" id="fieldTeacher">RENIMAR ALMEIDA</div>
-            </div>
-            <div>
-              <div class="small muted">Ano/Turma</div>
-              <div class="inline-editable" contenteditable="true" id="fieldClass">______</div>
-            </div>
-            <div style="grid-column:1/-1;margin-top:6px">
-              <div class="small muted">Componente curricular</div>
-              <div class="inline-editable" contenteditable="true" id="fieldComponent">INGLÊS</div>
-            </div>
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <div class="controls">
+        <h2>Gerador de Provas</h2>
+        <div class="muted">Configurações do cabeçalho</div>
+        <label class="small">Logo (arrastar/soltar ou clicar)</label>
+        <div class="logo-drop" id="logoDrop" tabindex="0">
+          <div id="logoPreviewWrap">
+            <div class="muted">Arraste a logo aqui</div>
           </div>
         </div>
-      </div>
-      <div class="hint">Clique em qualquer campo para editar — alterações salvas automaticamente.</div>
+        <label class="small">Altura do logo (px)</label>
+        <input type="range" id="logoHeight" min="40" max="140" value="90"><label class="small">Alinhamento do cabeçalho</label>
+    <div class="row">
+      <button class="align-btn" data-align="left">Esquerda</button>
+      <button class="align-btn" data-align="center">Central</button>
+      <button class="align-btn" data-align="right">Direita</button>
     </div>
 
-    <div class="card" aria-live="polite">
-      <strong>Questões</strong>
-      <div style="margin-top:8px">
-        <label class="small muted">Colar/colar várias questões</label>
-        <textarea id="pasteArea" placeholder="Cole aqui várias questões (ex.: 1. Questão..., 2) Outra...). O sistema detecta numeração e alternativas."></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="analyzeBtn" class="btn small-btn">Analisar e gerar</button>
-          <button id="addManualBtn" class="btn small-btn ghost">Adicionar questão manual</button>
-          <button id="sampleBtn" class="btn small-btn ghost" title="Inserir exemplos">Inserir exemplos</button>
-        </div>
-        <div class="hint">Detecta numeração 1, 1., 1 -) e alternativas A), A., A -). Se colar texto sem numeração, será criado como uma única questão.</div>
-      </div>
+    <label class="small">Campos do cabeçalho (clique para editar)</label>
+    <div class="field-inline">
+      <div class="cab-edit small"><div contenteditable id="schName" class="inline-edit">Nome da Escola</div></div>
+      <div class="cab-edit small"><div contenteditable id="studentName" class="inline-edit">Aluno(a)</div></div>
+      <div class="cab-edit small"><div contenteditable id="teacherName" class="inline-edit">Professor(a)</div></div>
+      <div class="cab-edit small"><div contenteditable id="subjectName" class="inline-edit">Componente curricular</div></div>
+      <div class="cab-edit small"><div style="display:flex;gap:8px"><div contenteditable id="annoTurma" class="inline-edit">Ano/Turma</div><div contenteditable id="dateField" class="inline-edit">Data</div></div></div>
     </div>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong>Lista de questões</strong>
-        <div class="muted small">Total: <span id="totalCount">0</span></div>
-      </div>
-      <div class="questions-list" id="questionsList" tabindex="0" aria-label="Lista de questões"></div>
+    <label class="small">Colar questões (várias) — reconhece numeração</label>
+    <textarea id="bulkQuestions" rows="6" placeholder="Cole aqui várias questões. Ex: 1. Qual ...\n2 - Outra pergunta..." ></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn" id="parseBtn">Analisar e gerar</button>
+      <button class="btn ghost" id="addQbtn">Adicionar questão</button>
     </div>
 
-    <div class="card">
-      <strong>Opções</strong>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button id="saveBtn" class="btn ghost small-btn">Forçar salvar</button>
-        <button id="loadBtn" class="btn ghost small-btn">Carregar salvo</button>
-        <button id="clearLocalBtn" class="btn ghost small-btn danger">Limpar localStorage</button>
-      </div>
-      <div class="hint" style="margin-top:8px">Arquivos de imagem > 5MB não são carregados — mensagem de erro será mostrada.</div>
+    <label class="small">Exemplos</label>
+    <div class="muted small">Carregue exemplos prontos para testar.</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn ghost" id="loadExample1">Exemplo: Simples</button>
+      <button class="btn ghost" id="loadExample2">Exemplo: Múltipla escolha</button>
     </div>
+
+    <label class="small">Tema</label>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn ghost" id="toggleTheme">Alternar Tema</button>
+    </div>
+
+    <div style="margin-top:12px" class="footer-actions">
+      <button class="btn" id="exportPdf">Exportar PDF</button>
+      <button class="btn ghost" id="exportGabarito">Exportar Gabarito</button>
+      <button class="btn ghost" id="clearAll">Limpar prova</button>
+    </div>
+
+    <div style="margin-top:14px" class="muted small">Salvo automaticamente no seu navegador (localStorage).</div>
   </div>
+</aside>
 
-  <!-- Right column: preview + export -->
-  <div class="right">
-    <div class="card preview-wrap">
-      <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-        <strong>Pré-visualização (A4 - retrato)</strong>
-        <div style="display:flex;gap:10px;align-items:center">
-          <label class="muted small">Tema do PDF</label>
-          <select id="pdfTheme" aria-label="Tema do PDF" style="padding:6px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)">
-            <option value="current">Usar tema atual</option>
-            <option value="light">Claro</option>
-            <option value="dark">Escuro</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="previewContainer" class="a4" role="document" aria-label="Pré-visualização da prova">
-        <!-- Conteúdo renderizado por JS -->
-      </div>
-
-      <div style="display:flex;gap:8px;margin-top:8px;justify-content:space-between;align-items:center;width:100%">
-        <div class="muted">As linhas de resposta usam <code>border-bottom:1.5px solid #000</code>.</div>
-        <div style="display:flex;gap:8px">
-          <button id="exportPdfBtn2" class="btn">Exportar PDF</button>
-          <button id="exportGabaritoBtn2" class="btn ghost">Exportar Gabarito</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <strong>Mensagens</strong>
-      <div id="logArea" class="muted-block">Pronto — carregue ou crie sua prova.</div>
-    </div>
+<main class="main">
+  <div class="toolbar">
+    <div class="muted">Modo edição / preview A4</div>
   </div>
+  <div class="preview-wrap">
+    <section class="editor" id="editor">
+      <h3 style="margin-top:0">Editor de Questões</h3>
+      <div id="questionsList"></div>
+    </section>
 
-  <footer class="app-footer">
-    <div>Desenvolvido para Flowmize · Gerador de Provas (offline)</div>
-    <div>Atalhos: TAB navega entre campos — arraste imagens para adicionar</div>
-  </footer>
-</div>
-
-<!-- html2pdf (única dependência externa necessária) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-
-<script>
-/* =========================
-   Gerador de Provas v1
-   Tudo salvo em localStorage: chave "geradorDeProvas_v1"
-   Comentários em português para facilitar manutenção.
-   ========================= */
-
-(function(){
-  // ---------- util ----------
-  const qs = (sel,root=document) => root.querySelector(sel);
-  const qsa = (sel,root=document) => Array.from(root.querySelectorAll(sel));
-  const STORAGE_KEY = 'geradorDeProvas_v1';
-  const MAX_IMAGE_MB = 5;
-
-  // ---------- estado inicial ----------
-  let state = {
-    header: {
-      school: 'UNIDADE INTEGRADA JOSÉ JOAQUIM DE ARAÚJO',
-      date: '____/____/______',
-      student: '_____________________________________________',
-      teacher: 'RENIMAR ALMEIDA',
-      component: 'INGLÊS',
-      class: '______',
-      grade: '______',
-      logoData: null,
-      align: 'left' // left, center, right
-    },
-    questions: [
-      // estrutura de exemplo de uma questão:
-      // { id:'q_1', text:'Questão...', lines:3, imageData:null, imageScale:70, alternatives: ['A Texto','B Texto'], correct: [0], shortAnswer:'' }
-    ],
-    theme: 'light' // light | dark
-  };
-
-  // ---------- elementos ----------
-  const previewContainer = qs('#previewContainer');
-  const logoInput = qs('#logoInput');
-  const logoDrop = qs('#logoDrop');
-  const logoPlaceholder = qs('#logoPlaceholder');
-  const fieldIds = {
-    school: 'fieldSchool', date:'fieldDate', student:'fieldStudent',
-    teacher:'fieldTeacher', component:'fieldComponent', class:'fieldClass', grade:'fieldGrade'
-  };
-
-  const questionsList = qs('#questionsList');
-  const pasteArea = qs('#pasteArea');
-  const analyzeBtn = qs('#analyzeBtn');
-  const addManualBtn = qs('#addManualBtn');
-  const sampleBtn = qs('#sampleBtn');
-  const totalCount = qs('#totalCount');
-  const logArea = qs('#logArea');
-  const clearBtn = qs('#clearBtn');
-  const clearLocalBtn = qs('#clearLocalBtn');
-  const saveBtn = qs('#saveBtn');
-  const loadBtn = qs('#loadBtn');
-  const toggleThemeBtn = qs('#toggleTheme');
-  const exportPdfBtn = qs('#exportPdfBtn';
-  ) // placeholder to satisfy linter
-  // small fix: above line accidental; reassign correctly below.
-
-})();
-
-</script>
-
-<!-- Script real -->
-<script>
-/* Main script start */
-(() => {
-  const STORAGE_KEY = 'geradorDeProvas_v1';
-  const MAX_IMAGE_MB = 5;
-  const qs = (s, r=document) => r.querySelector(s);
-  const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
-  const rndId = (p='q') => p + '_' + Math.random().toString(36).slice(2,9);
-
-  // DOM refs
-  const previewContainer = qs('#previewContainer');
-  const logoInput = qs('#logoInput');
-  const logoDrop = qs('#logoDrop');
-  const logoPlaceholder = qs('#logoPlaceholder');
-  const questionsList = qs('#questionsList');
-  const pasteArea = qs('#pasteArea');
-  const analyzeBtn = qs('#analyzeBtn');
-  const addManualBtn = qs('#addManualBtn');
-  const sampleBtn = qs('#sampleBtn');
-  const totalCount = qs('#totalCount');
-  const logArea = qs('#logArea');
-  const clearBtn = qs('#clearBtn');
-  const clearLocalBtn = qs('#clearLocalBtn');
-  const saveBtn = qs('#saveBtn');
-  const loadBtn = qs('#loadBtn');
-  const toggleThemeBtn = qs('#toggleTheme');
-  const exportPdfBtnTop = qs('#exportPdfBtn');
-  const exportGabaritoBtnTop = qs('#exportGabaritoBtn');
-  const exportPdfBtnBottom = qs('#exportPdfBtn2');
-  const exportGabaritoBtnBottom = qs('#exportGabaritoBtn2');
-  const pdfTheme = qs('#pdfTheme');
-
-  // header fields
-  const headerFields = {
-    school: qs('#fieldSchool'),
-    date: qs('#fieldDate'),
-    student: qs('#fieldStudent'),
-    teacher: qs('#fieldTeacher'),
-    component: qs('#fieldComponent'),
-    class: qs('#fieldClass'),
-    grade: qs('#fieldGrade')
-  };
-
-  // state
-  let state = {
-    header: {
-      school: 'UNIDADE INTEGRADA JOSÉ JOAQUIM DE ARAÚJO',
-      date: '____/____/______',
-      student: '_____________________________________________',
-      teacher: 'RENIMAR ALMEIDA',
-      component: 'INGLÊS',
-      class: '______',
-      grade: '______',
-      logoData: null,
-      align: 'left'
-    },
-    questions: [],
-    theme: 'light' // 'light' | 'dark'
-  };
-
-  // ---------- persistence ----------
-  function saveState() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      flash('Salvo automaticamente');
-    } catch (e) {
-      console.error('Erro ao salvar', e);
-      flash('Erro ao salvar no localStorage', true);
-    }
-  }
-  function loadState() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    try {
-      const parsed = JSON.parse(raw);
-      state = parsed;
-      flash('Prova carregada do localStorage');
-      return true;
-    } catch (e) {
-      console.error('Erro parse localStorage', e);
-      return false;
-    }
-  }
-  function clearState() {
-    localStorage.removeItem(STORAGE_KEY);
-    state = { header: { school:'UNIDADE INTEGRADA JOSÉ JOAQUIM DE ARAÚJO', date:'____/____/______', student:'_____________________________________________', teacher:'RENIMAR ALMEIDA', component:'INGLÊS', class:'______', grade:'______', logoData:null, align:'left' }, questions: [], theme:'light' };
-    renderAll();
-    flash('Prova reiniciada');
-  }
-
-  // ---------- utils ----------
-  function flash(msg, isError=false) {
-    logArea.textContent = msg;
-    logArea.style.color = isError ? 'var(--danger)' : '';
-    setTimeout(()=>{ logArea.style.color=''; }, 3500);
-  }
-
-  // detect numbered questions and alternatives
-  function parseQuestionsFromText(text) {
-    // Normalize newlines
-    if (!text || !text.trim()) return [];
-    text = text.replace(/\r/g,'');
-    // Split into blocks by lines that look like question starts:
-    // Recognize patterns: ^\s*\d+[\.\-\)]?\s
-    // We'll split by positions where a line starts with a number token.
-    const lines = text.split('\n');
-    const blocks = [];
-    let cur = [];
-    for (let line of lines) {
-      if (/^\s*\d+\s*[\.\-\)]?\s/.test(line) && cur.length>0) {
-        blocks.push(cur.join('\n').trim());
-        cur = [line];
-      } else {
-        cur.push(line);
-      }
-    }
-    if (cur.length) blocks.push(cur.join('\n').trim());
-    // If blocks empty, treat whole text as single question
-    if (blocks.length===0 && text.trim()) blocks.push(text.trim());
-    // For each block, try to extract question text and alternatives
-    const result = blocks.map(block => {
-      // remove leading numbering like "1.", "1 -", "1)"
-      const b = block.replace(/^\s*\d+\s*[\.\-\)]?\s*/,'').trim();
-      // try to detect alternatives lines starting with letters A,B,C...
-      const bLines = b.split('\n').map(l=>l.trim()).filter(Boolean);
-      const altLines = bLines.filter(l => /^[A-D]\s*[\.\-\)]\s*/i.test(l) || /^[A-D]\s*[:\-]\s*/i.test(l) || /^[A-D]\s+\w+/i.test(l));
-      let alternatives = null;
-      let textOnly = b;
-      if (altLines.length >= 2) {
-        // find index of first alternative line and separate
-        let idx = bLines.findIndex(l => altLines.includes(l));
-        textOnly = bLines.slice(0, idx).join(' ');
-        alternatives = bLines.slice(idx).map(l => l.replace(/^[A-D]\s*[\.\-\):]?\s*/i,'').trim());
-      } else {
-        // also try alternatives like "a) ..." lowercase or "A) ..." inline with commas
-        const inlineAlt = b.match(/(?:A\)|A\.|A -)\s*([^B]+)/i);
-        // skip
-      }
-      // Map to object
-      return {
-        id: rndId('q'),
-        text: textOnly || b,
-        lines: 3,
-        imageData: null,
-        imageScale: 70,
-        alternatives: alternatives ? alternatives : null, // array or null
-        correct: [], // indices of correct alternatives
-        shortAnswer: ''
-      };
-    });
-    return result;
-  }
-
-  // ---------- rendering editor list ----------
-  function renderQuestionsList() {
-    questionsList.innerHTML = '';
-    state.questions.forEach((q, idx) => {
-      const div = document.createElement('div');
-      div.className = 'q-card';
-      div.dataset.id = q.id;
-      // left num
-      const num = document.createElement('div'); num.className='q-num'; num.textContent = (idx+1)+'.';
-      const body = document.createElement('div'); body.className='q-body';
-      // editable text
-      const textBox = document.createElement('div');
-      textBox.className='inline-editable';
-      textBox.contentEditable = true;
-      textBox.innerText = q.text || '';
-      textBox.addEventListener('input', (e)=> {
-        q.text = textBox.innerText;
-        scheduleSave();
-        renderPreview();
-      });
-      // controls: lines, image, alt/gabarito
-      const controls = document.createElement('div');
-      controls.style.marginTop = '8px';
-      controls.innerHTML = `
-        <div style="display:flex;gap:8px;align-items:center">
-          <label class="small muted">Linhas</label>
-          <select class="line-select small-btn" aria-label="Número de linhas">
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-          </select>
-          <label class="small muted">Imagem</label>
-          <button class="img-btn small-btn ghost">Enviar</button>
-          <button class="dup-btn small-btn ghost">Duplicar</button>
-          <button class="del-btn small-btn ghost">Remover</button>
-          <button class="up-btn small-btn ghost">↑</button>
-          <button class="down-btn small-btn ghost">↓</button>
+    <section class="preview" aria-label="Preview de impressão">
+      <div class="a4" id="a4preview">
+        <!-- Cabeçalho -->
+        <div id="printHeader" class="prov-cab" data-align="left">
+          <div class="cab-left">
+            <div id="logoArea"></div>
+          </div>
+          <div class="cab-right">
+            <div class="cab-info">
+              <div contenteditable id="ph_schName" class="inline-edit'>Nome da Escola</div>
+              <div style="display:flex;gap:8px"><div contenteditable id="ph_studentName" class="inline-edit">Aluno(a)</div><div contenteditable id="ph_teacherName" class="inline-edit">Professor(a)</div></div>
+              <div contenteditable id="ph_subjectName" class="inline-edit">Componente curricular</div>
+              <div style="display:flex;gap:8px"><div contenteditable id="ph_annoTurma" class="inline-edit">Ano/Turma</div><div contenteditable id="ph_dateField" class="inline-edit">Data</div></div>
+            </div>
+          </div>
         </div>
-      `;
-      // append alt/gabarito UI
-      const altWrap = document.createElement('div');
-      altWrap.style.marginTop = '8px';
-      if (q.alternatives && q.alternatives.length) {
-        const altList = document.createElement('div');
-        altList.className = 'alt-list';
-        q.alternatives.forEach((alt, ai) => {
-          const altItem = document.createElement('label');
-          altItem.className = 'alt-item';
-          const radio = document.createElement('input');
-          radio.type = 'checkbox';
-          radio.checked = q.correct.includes(ai);
-          radio.addEventListener('change', ()=> {
-            if (radio.checked) q.correct.push(ai);
-            else q.correct = q.correct.filter(x=>x!==ai);
-            scheduleSave();
-          });
-          const span = document.createElement('div');
-          span.textContent = String.fromCharCode(65+ai) + '. ' + alt;
-          altItem.appendChild(radio);
-          altItem.appendChild(span);
-          altList.appendChild(altItem);
-        });
-        altWrap.appendChild(altList);
-      } else {
-        const shortLabel = document.createElement('div');
-        shortLabel.className = 'muted-block';
-        shortLabel.textContent = 'Gabarito (resposta curta):';
-        const shortInput = document.createElement('input');
-        shortInput.type = 'text';
-        shortInput.className = 'inline-editable';
-        shortInput.style.display='block';
-        shortInput.style.width='100%';
-        shortInput.value = q.shortAnswer || '';
-        shortInput.addEventListener('input', ()=> { q.shortAnswer = shortInput.value; scheduleSave(); });
-        altWrap.appendChild(shortLabel);
-        altWrap.appendChild(shortInput);
-      }
-      // image preview and slider
-      const imgWrap = document.createElement('div');
-      imgWrap.style.marginTop = '8px';
-      if (q.imageData) {
-        const img = document.createElement('img');
-        img.src = q.imageData;
-        img.style.maxWidth = '120px';
-        img.style.display = 'block';
-        img.style.marginTop = '6px';
-        img.style.borderRadius = '6px';
-        imgWrap.appendChild(img);
-        const removeImgBtn = document.createElement('button'); removeImgBtn.className='small-btn ghost'; removeImgBtn.textContent='Remover imagem';
-        removeImgBtn.addEventListener('click', ()=> { q.imageData = null; scheduleSave(); renderAll(); });
-        const scaleLabel = document.createElement('div'); scaleLabel.className='muted-block'; scaleLabel.textContent='Tamanho imagem';
-        const scaleRange = document.createElement('input'); scaleRange.type='range'; scaleRange.min=30; scaleRange.max=100; scaleRange.value=q.imageScale||70;
-        scaleRange.addEventListener('input', ()=> { q.imageScale = Number(scaleRange.value); scheduleSave(); renderAll(); });
-        imgWrap.appendChild(scaleLabel); imgWrap.appendChild(scaleRange); imgWrap.appendChild(removeImgBtn);
-      }
 
-      // wire buttons
-      const lineSelect = controls.querySelector('.line-select');
-      lineSelect.value = (q.lines||3).toString();
-      lineSelect.addEventListener('change', ()=> { q.lines = Number(lineSelect.value); scheduleSave(); renderPreview(); });
+        <div id="printBody" style="margin-top:18px">
+          <div id="printQuestions"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
 
-      const imgBtn = controls.querySelector('.img-btn');
-      imgBtn.addEventListener('click', ()=> {
-        // trigger file input
-        const tmp = document.createElement('input'); tmp.type='file'; tmp.accept='image/*';
-        tmp.onchange = (e) => {
-          const f = e.target.files[0];
-          if (!f) return;
-          if ((f.size/1024/1024) > MAX_IMAGE_MB) { flash('Imagem muito grande. Máx ' + MAX_IMAGE_MB + 'MB', true); return; }
-          const reader = new FileReader();
-          reader.onload = (ev)=> { q.imageData = ev.target.result; scheduleSave(); renderAll(); };
-          reader.readAsDataURL(f);
-        };
-        tmp.click();
-      });
+  </div>  <script>
+  // ======= Gerador de Provas - JavaScript =======
+  // Código em português, modularizado em funções e com persistência em localStorage.
 
-      const dupBtn = controls.querySelector('.dup-btn');
-      dupBtn.addEventListener('click', ()=> {
-        const newQ = JSON.parse(JSON.stringify(q));
-        newQ.id = rndId('q'); state.questions.splice(idx+1,0,newQ); scheduleSave(); renderAll();
-      });
+  const STORAGE_KEY = 'gerador_provas_v1';
+  const stateDefault = {
+    header:{logo:null,logoHeight:90,align:'left',schName:'Nome da Escola',studentName:'Aluno(a)',teacherName:'Professor(a)',subjectName:'Componente curricular',annoTurma:'Ano/Turma',dateField:new Date().toLocaleDateString()},
+    questions:[] ,
+    theme:'light'
+  };
 
-      const delBtn = controls.querySelector('.del-btn');
-      delBtn.addEventListener('click', ()=> {
-        if (!confirm('Remover questão?')) return;
-        state.questions.splice(idx,1); scheduleSave(); renderAll();
-      });
+  let state = loadState();
 
-      const upBtn = controls.querySelector('.up-btn');
-      upBtn.addEventListener('click', ()=> {
-        if (idx===0) return;
-        const [item] = state.questions.splice(idx,1);
-        state.questions.splice(idx-1,0,item);
-        scheduleSave(); renderAll();
-      });
-
-      const downBtn = controls.querySelector('.down-btn');
-      downBtn.addEventListener('click', ()=> {
-        if (idx===state.questions.length-1) return;
-        const [item] = state.questions.splice(idx,1);
-        state.questions.splice(idx+1,0,item);
-        scheduleSave(); renderAll();
-      });
-
-      // assemble
-      body.appendChild(textBox);
-      body.appendChild(controls);
-      if (imgWrap.children.length) body.appendChild(imgWrap);
-      body.appendChild(altWrap);
-
-      // append to card
-      div.appendChild(num);
-      div.appendChild(body);
-
-      // small aria and drag-drop for images
-      div.addEventListener('dragover', (ev)=>{ ev.preventDefault(); div.style.opacity=0.8; });
-      div.addEventListener('dragleave', ()=>{ div.style.opacity=1; });
-      div.addEventListener('drop', (ev)=> {
-        ev.preventDefault(); div.style.opacity=1;
-        const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
-        if (f && f.type.startsWith('image/')) {
-          if ((f.size/1024/1024) > MAX_IMAGE_MB) { flash('Imagem muito grande. Máx ' + MAX_IMAGE_MB + 'MB', true); return; }
-          const reader = new FileReader();
-          reader.onload = (e)=> { q.imageData = e.target.result; scheduleSave(); renderAll(); };
-          reader.readAsDataURL(f);
-        }
-      });
-
-      questionsList.appendChild(div);
-    });
-    totalCount.textContent = state.questions.length;
-  }
-
-  // ---------- render preview ----------
-  function renderPreview() {
-    // create DOM for preview inside previewContainer
-    const header = state.header;
-    const paper = document.createElement('div');
-    paper.className = 'paper';
-    // build header
-    const ph = document.createElement('div'); ph.className = 'paper-header';
-    // Logo
-    const logoBox = document.createElement('div'); logoBox.className='logo';
-    if (header.logoData) {
-      const img = document.createElement('img');
-      img.src = header.logoData;
-      img.style.maxWidth='100%'; img.style.maxHeight='100%'; img.alt='Logo';
-      logoBox.appendChild(img);
-    } else {
-      const sp = document.createElement('div'); sp.className='muted'; sp.textContent='LOGO';
-      logoBox.appendChild(sp);
-    }
-    ph.appendChild(logoBox);
-    // meta grid
-    const meta = document.createElement('div'); meta.className='meta';
-    const leftCol = document.createElement('div'); leftCol.className='item';
-    leftCol.innerHTML = `<div><span class="label">Escola: </span><span>${header.school}</span></div>
-                         <div><span class="label">Aluno(a): </span><span>${header.student}</span></div>`;
-    const rightCol = document.createElement('div'); rightCol.className='item';
-    rightCol.innerHTML = `<div><span class="label">Professor(a): </span><span>${header.teacher}</span></div>
-                          <div><span class="label">Nota: </span><span>${header.grade}</span></div>`;
-    meta.appendChild(leftCol);
-    meta.appendChild(rightCol);
-    // second row with component & class & date
-    const meta2 = document.createElement('div'); meta2.className='meta';
-    meta2.style.marginTop='8px';
-    meta2.innerHTML = `<div class="item"><span class="label">Componente: </span><span>${header.component}</span></div>
-                       <div class="item"><span class="label">Ano/Turma: </span><span>${header.class}</span></div>
-                       <div class="item"><span class="label">Data: </span><span>${header.date}</span></div>`;
-    // combine
-    const metaWrap = document.createElement('div');
-    metaWrap.style.display='flex'; metaWrap.style.flexDirection='column';
-    metaWrap.appendChild(meta);
-    metaWrap.appendChild(meta2);
-    ph.appendChild(metaWrap);
-    paper.appendChild(ph);
-
-    // body: questions
-    const pb = document.createElement('div'); pb.className='paper-body';
-    state.questions.forEach((q, i) => {
-      const pq = document.createElement('div'); pq.className='paper-q';
-      const qtext = document.createElement('div'); qtext.className='q-text'; qtext.innerText = (i+1) + '. ' + (q.text || '');
-      pq.appendChild(qtext);
-      // image if exists
-      if (q.imageData) {
-        const img = document.createElement('img'); img.src = q.imageData;
-        img.style.maxWidth = (q.imageScale||70) + '%';
-        img.style.display='block'; img.style.margin='8px 0'; img.style.borderRadius='6px';
-        pq.appendChild(img);
-      }
-      // alternatives
-      if (q.alternatives && q.alternatives.length) {
-        const altList = document.createElement('div'); altList.className='alt-list';
-        q.alternatives.forEach((alt, ai) => {
-          const altItem = document.createElement('div'); altItem.className='alt-item';
-          altItem.textContent = String.fromCharCode(65+ai) + '. ' + alt;
-          altList.appendChild(altItem);
-        });
-        pq.appendChild(altList);
-      }
-      // response lines
-      const linesWrap = document.createElement('div'); linesWrap.className='response-lines';
-      const lines = Math.max(1, Math.min(5, q.lines || 3));
-      for (let r=0;r<lines;r++){
-        const ln = document.createElement('div'); ln.className='response-line'; ln.setAttribute('aria-hidden','true');
-        ln.style.minHeight = '18px';
-        // add extra spacing for first line if alternatives exist
-        linesWrap.appendChild(ln);
-      }
-      pq.appendChild(linesWrap);
-      // gabarito marker (hidden in main prova PDF, but we can show when exporting gabarito)
-      paper.appendChild(pq);
-    });
-    // replace previewContainer content
-    previewContainer.innerHTML = '';
-    previewContainer.appendChild(paper);
-
-    // apply alignment
-    previewContainer.style.textAlign = state.header.align || 'left';
-  }
-
-  // ---------- renderEverything ----------
-  function renderAll() {
-    // set header fields values
-    Object.keys(headerFields).forEach(k => {
-      const el = headerFields[k];
-      el.innerText = state.header[k] || '';
-      // attach input listener only once
-      el.oninput = (e)=> {
-        state.header[k] = el.innerText; scheduleSave();
-        renderPreview();
-      };
-    });
-
-    // logo
-    if (state.header.logoData) {
-      logoPlaceholder.style.display = 'none';
-      logoDrop.style.background = 'transparent';
-      // show small thumbnail inside drop area
-      logoDrop.innerHTML = `<img src="${state.header.logoData}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px" alt="logo" />`;
-    } else {
-      logoDrop.innerHTML = `<input id="logoInput" type="file" accept="image/*" /><span id="logoPlaceholder" class="muted">Logo (arrastar)</span>`;
-      // rebind logoInput
-      const ni = logoDrop.querySelector('#logoInput');
-      ni.addEventListener('change', (e)=> {
-        const f = e.target.files[0];
-        if (!f) return;
-        if ((f.size/1024/1024) > MAX_IMAGE_MB) { flash('Imagem muito grande. Máx ' + MAX_IMAGE_MB + 'MB', true); return; }
-        const reader = new FileReader();
-        reader.onload = (ev)=> { state.header.logoData = ev.target.result; scheduleSave(); renderAll(); };
-        reader.readAsDataURL(f);
-      });
-    }
-
-    // update list
-    renderQuestionsList();
-    renderPreview();
-
-    // apply theme
-    document.documentElement.classList.toggle('dark', state.theme==='dark');
-  }
-
-  // ---------- dragging logo ----------
-  (function bindLogoDrop(){
-    const drop = qs('#logoDrop');
-    drop.addEventListener('dragover', (e)=>{ e.preventDefault(); drop.style.opacity=0.8; });
-    drop.addEventListener('dragleave', ()=>{ drop.style.opacity=1; });
-    drop.addEventListener('drop', (e)=> {
-      e.preventDefault(); drop.style.opacity=1;
-      const f = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f && f.type.startsWith('image/')) {
-        if ((f.size/1024/1024) > MAX_IMAGE_MB) { flash('Logo muito grande. Máx ' + MAX_IMAGE_MB + 'MB', true); return; }
-        const reader = new FileReader();
-        reader.onload = (ev)=> { state.header.logoData = ev.target.result; scheduleSave(); renderAll(); };
-        reader.readAsDataURL(f);
-      }
-    });
-    // click input
-    drop.addEventListener('click', ()=> {
-      const tmp = document.createElement('input'); tmp.type='file'; tmp.accept='image/*';
-      tmp.onchange = (e)=> {
-        const f = e.target.files[0];
-        if (!f) return;
-        if ((f.size/1024/1024) > MAX_IMAGE_MB) { flash('Logo muito grande. Máx ' + MAX_IMAGE_MB + 'MB', true); return; }
-        const reader = new FileReader();
-        reader.onload = (ev)=> { state.header.logoData = ev.target.result; scheduleSave(); renderAll(); };
-        reader.readAsDataURL(f);
-      };
-      tmp.click();
-    });
-  })();
-
-  // ---------- actions ----------
-  analyzeBtn.addEventListener('click', ()=> {
-    const text = pasteArea.value;
-    const parsed = parseQuestionsFromText(text);
-    if (parsed.length===0) {
-      // if no detected blocks, create a single question
-      flash('Nenhuma questão detectada no texto colado.', true);
-      return;
-    }
-    // append parsed
-    state.questions = state.questions.concat(parsed);
-    scheduleSave();
-    renderAll();
-    flash(parsed.length + ' questão(ões) adicionada(s).');
-  });
-
-  addManualBtn.addEventListener('click', ()=> {
-    state.questions.push({ id: rndId('q'), text:'Nova questão...', lines:3, imageData:null, imageScale:70, alternatives:null, correct:[], shortAnswer:'' });
-    scheduleSave(); renderAll();
-  });
-
-  sampleBtn.addEventListener('click', ()=> {
-    const sample = `1. Leia o texto e responda: What is the main idea?
-A) Option one
-B) Option two
-C) Option three
-2. Escreva uma pequena frase em inglês sobre sua escola.
-3) Observe a imagem e descreva o que vê.`;
-    pasteArea.value = sample;
-    flash('Exemplos inseridos no campo de colar. Clique em "Analisar e gerar".');
-  });
-
-  // Re-implement parseQuestionsFromText here (duplicated for scope)
-  function parseQuestionsFromText(text) {
-    if (!text || !text.trim()) return [];
-    text = text.replace(/\r/g,'');
-    const lines = text.split('\n');
-    const blocks = [];
-    let cur = [];
-    for (let line of lines) {
-      if (/^\s*\d+\s*[\.\-\)]?\s/.test(line) && cur.length>0) {
-        blocks.push(cur.join('\n').trim());
-        cur = [line];
-      } else {
-        cur.push(line);
-      }
-    }
-    if (cur.length) blocks.push(cur.join('\n').trim());
-    if (blocks.length===0 && text.trim()) blocks.push(text.trim());
-    return blocks.map(block => {
-      const b = block.replace(/^\s*\d+\s*[\.\-\)]?\s*/,'').trim();
-      const bLines = b.split('\n').map(l=>l.trim()).filter(Boolean);
-      // detect alternatives if lines start with A), B), etc.
-      let altStart = -1;
-      for (let i=0;i<bLines.length;i++){
-        if (/^[A-D]\s*[\.\-\):]/i.test(bLines[i]) || /^[A-D]\s*:/.test(bLines[i])) { altStart = i; break; }
-      }
-      let alternatives = null;
-      let textOnly = b;
-      if (altStart >= 0) {
-        textOnly = bLines.slice(0, altStart).join(' ');
-        alternatives = bLines.slice(altStart).map(l => l.replace(/^[A-D]\s*[\.\-\):]?\s*/i,'').trim());
-      }
-      return { id: rndId('q'), text: textOnly || b, lines:3, imageData:null, imageScale:70, alternatives: alternatives, correct:[], shortAnswer:'' };
-    });
-  }
-
-  // ---------- save / load / autosave ----------
-  let saveTimer = null;
-  function scheduleSave() {
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(()=> {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      flash('Alterações salvas');
-    }, 700);
-    // update preview quickly
-    renderPreview();
-    renderQuestionsList();
-  }
-
-  saveBtn.addEventListener('click', ()=> {
+  // ---------- Helpers ----------
+  function saveState(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    flash('Salvo manualmente');
-  });
-
-  loadBtn.addEventListener('click', ()=> {
-    if (localStorage.getItem(STORAGE_KEY)) {
-      try {
-        state = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        renderAll();
-        flash('Carregado do localStorage');
-      } catch (e) { flash('Erro ao carregar estado', true); }
-    } else flash('Nenhum estado salvo localmente');
-  });
-
-  clearLocalBtn.addEventListener('click', ()=> {
-    if (!confirm('Remover todos os dados salvos localmente?')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    state.questions = []; state.header.logoData = null;
-    renderAll();
-    flash('localStorage limpo');
-  });
-
-  clearBtn.addEventListener('click', ()=> {
-    if (!confirm('Limpar prova atual (não apaga localStorage salvo automaticamente)?')) return;
-    state.questions = [];
-    state.header = { school:'UNIDADE INTEGRADA JOSÉ JOAQUIM DE ARAÚJO', date:'____/____/______', student:'_____________________________________________', teacher:'RENIMAR ALMEIDA', component:'INGLÊS', class:'______', grade:'______', logoData:null, align:'left' };
-    renderAll();
-    scheduleSave();
-  });
-
-  // ---------- header alignment buttons ----------
-  qsa('.align-controls button').forEach(btn => {
-    btn.addEventListener('click', ()=> {
-      const a = btn.dataset.align;
-      state.header.align = a;
-      scheduleSave();
-      renderPreview();
-    });
-  });
-
-  // ---------- theme toggle ----------
-  toggleThemeBtn.addEventListener('click', ()=> {
-    state.theme = (state.theme === 'dark') ? 'light' : 'dark';
-    document.documentElement.classList.toggle('dark', state.theme==='dark');
-    scheduleSave();
-    flash('Tema alternado: ' + state.theme);
-  });
-
-  // ---------- export / pdf ----------
-  function getExportFilename(type='Prova') {
-    // Prova_{Componente}_{YYYY-MM-DD}.pdf
-    const comp = (state.header.component || 'Prova').replace(/\s+/g,'_');
-    const d = new Date();
-    const iso = d.toISOString().slice(0,10);
-    return `${type}_${comp}_${iso}.pdf`.replace(/[^\w\.\-_\u00C0-\u017F]/g,'');
+  }
+  function loadState(){
+    try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)); return Object.assign({}, stateDefault, s || {});
+    }catch(e){return JSON.parse(JSON.stringify(stateDefault));}
   }
 
-  async function exportPreviewAsPdf({ includeGabarito=false } = {}) {
-    // clone previewContainer to make adjustments (like showing gabarito)
-    const cloneWrap = previewContainer.cloneNode(true);
-    // if includeGabarito, append answers at the end (or highlight)
-    if (includeGabarito) {
-      // For each question add a small "Gabarito: ..." below it
-      const paperQs = cloneWrap.querySelectorAll('.paper-q');
-      paperQs.forEach((pq, idx) => {
-        const q = state.questions[idx];
-        const gDiv = document.createElement('div');
-        gDiv.style.marginTop = '6px';
-        if (q.alternatives && q.alternatives.length && q.correct.length) {
-          const letters = q.correct.map(i => String.fromCharCode(65 + i)).join(', ');
-          gDiv.innerHTML = `<div class="gabarito">Gabarito: ${letters}</div>`;
-        } else if (q.shortAnswer && q.shortAnswer.trim()) {
-          gDiv.innerHTML = `<div class="gabarito">Gabarito: ${q.shortAnswer}</div>`;
-        } else {
-          gDiv.innerHTML = `<div class="gabarito">Gabarito: —</div>`;
-        }
-        pq.appendChild(gDiv);
+  // ---------- DOM refs ----------
+  const logoDrop = document.getElementById('logoDrop');
+  const logoPreviewWrap = document.getElementById('logoPreviewWrap');
+  const logoHeight = document.getElementById('logoHeight');
+  const alignBtns = document.querySelectorAll('.align-btn');
+
+  const schName = document.getElementById('schName');
+  const studentName = document.getElementById('studentName');
+  const teacherName = document.getElementById('teacherName');
+  const subjectName = document.getElementById('subjectName');
+  const annoTurma = document.getElementById('annoTurma');
+  const dateField = document.getElementById('dateField');
+
+  const ph_schName = document.getElementById('ph_schName');
+  const ph_studentName = document.getElementById('ph_studentName');
+  const ph_teacherName = document.getElementById('ph_teacherName');
+  const ph_subjectName = document.getElementById('ph_subjectName');
+  const ph_annoTurma = document.getElementById('ph_annoTurma');
+  const ph_dateField = document.getElementById('ph_dateField');
+  const logoArea = document.getElementById('logoArea');
+
+  const bulkQuestions = document.getElementById('bulkQuestions');
+  const parseBtn = document.getElementById('parseBtn');
+  const addQbtn = document.getElementById('addQbtn');
+  const questionsList = document.getElementById('questionsList');
+  const printQuestions = document.getElementById('printQuestions');
+
+  const exportPdfBtn = document.getElementById('exportPdf');
+  const exportGabaritoBtn = document.getElementById('exportGabarito');
+  const clearAllBtn = document.getElementById('clearAll');
+  const toggleThemeBtn = document.getElementById('toggleTheme');
+  const loadExample1Btn = document.getElementById('loadExample1');
+  const loadExample2Btn = document.getElementById('loadExample2');
+
+  // ---------- Inicialização ----------
+  function init(){
+    applyTheme();
+    bindHeader();
+    renderLogo();
+    renderQuestionsEditor();
+    renderPreview();
+    bindDragDropLogo();
+    setupButtons();
+    // auto-save debounce
+    setInterval(saveState,1500);
+  }
+
+  // ---------- Header bindings ----------
+  function bindHeader(){
+    logoHeight.value = state.header.logoHeight || 90;
+    logoHeight.addEventListener('input', e=>{state.header.logoHeight=+e.target.value; renderLogo(); saveState();});
+
+    alignBtns.forEach(b=>b.addEventListener('click', ()=>{state.header.align=b.dataset.align; document.getElementById('printHeader').style.justifyContent = (state.header.align==='right' ? 'flex-end' : (state.header.align==='center' ? 'center' : 'flex-start')); saveState(); renderPreview();}))
+
+    // sync contenteditable fields
+    [schName,studentName,teacherName,subjectName,annoTurma,dateField].forEach(el=>{
+      el.addEventListener('input',()=>{state.header[getId(el)] = el.innerText; syncPreviewHeader(); saveState();});
+      el.addEventListener('blur',()=>{saveState();});
+    });
+
+    // preview header contenteditable (sync back)
+    [ph_schName,ph_studentName,ph_teacherName,ph_subjectName,ph_annoTurma,ph_dateField].forEach(el=>{
+      el.addEventListener('input',()=>{const map={ph_schName:'schName',ph_studentName:'studentName',ph_teacherName:'teacherName',ph_subjectName:'subjectName',ph_annoTurma:'annoTurma',ph_dateField:'dateField'}; state.header[map[el.id]] = el.innerText; syncEditorHeader(); saveState();});
+    });
+  }
+  function getId(el){if(el.id==='schName')return 'schName'; if(el.id==='studentName')return 'studentName'; if(el.id==='teacherName')return 'teacherName'; if(el.id==='subjectName')return 'subjectName'; if(el.id==='annoTurma')return 'annoTurma'; if(el.id==='dateField')return 'dateField'; return el.id}
+
+  function syncPreviewHeader(){
+    ph_schName.innerText = state.header.schName || '';
+    ph_studentName.innerText = state.header.studentName || '';
+    ph_teacherName.innerText = state.header.teacherName || '';
+    ph_subjectName.innerText = state.header.subjectName || '';
+    ph_annoTurma.innerText = state.header.annoTurma || '';
+    ph_dateField.innerText = state.header.dateField || '';
+    renderLogo();
+  }
+  function syncEditorHeader(){
+    schName.innerText = state.header.schName || '';
+    studentName.innerText = state.header.studentName || '';
+    teacherName.innerText = state.header.teacherName || '';
+    subjectName.innerText = state.header.subjectName || '';
+    annoTurma.innerText = state.header.annoTurma || '';
+    dateField.innerText = state.header.dateField || '';
+    renderLogo();
+  }
+
+  // ---------- Logo drag & drop ----------
+  function bindDragDropLogo(){
+    ;['dragenter','dragover'].forEach(ev=>logoDrop.addEventListener(ev,e=>{e.preventDefault(); logoDrop.style.borderColor='rgba(11,99,214,0.6)'}));
+    ;['dragleave','drop'].forEach(ev=>logoDrop.addEventListener(ev,e=>{e.preventDefault(); logoDrop.style.borderColor='rgba(2,6,23,0.08)'}));
+    logoDrop.addEventListener('drop', e=>{
+      const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f) handleLogoFile(f);
+    });
+    logoDrop.addEventListener('click', ()=>{
+      const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.onchange = ()=>{ if(inp.files[0]) handleLogoFile(inp.files[0]);}; inp.click();
+    });
+  }
+  function handleLogoFile(file){
+    if(!file.type.startsWith('image/')){alert('Arquivo deve ser imagem.');return}
+    if(file.size>2*1024*1024){alert('Imagem muito grande (máx 2MB).');return}
+    const r = new FileReader(); r.onload = ()=>{ state.header.logo = r.result; renderLogo(); saveState(); }; r.readAsDataURL(file);
+  }
+  function renderLogo(){
+    logoArea.innerHTML = '';
+    logoPreviewWrap.innerHTML = '';
+    if(state.header.logo){
+      const img1 = document.createElement('img'); img1.src = state.header.logo; img1.style.height = state.header.logoHeight + 'px'; img1.alt='logo'; logoArea.appendChild(img1);
+      const img2 = document.createElement('img'); img2.src = state.header.logo; img2.style.height = Math.min(90, state.header.logoHeight) + 'px'; logoPreviewWrap.appendChild(img2);
+      // add remove button
+      const rem = document.createElement('button'); rem.className='btn ghost'; rem.textContent='Remover'; rem.style.marginTop='6px'; rem.onclick=()=>{state.header.logo=null; renderLogo(); saveState();}; logoPreviewWrap.appendChild(rem);
+      document.getElementById('printHeader').style.justifyContent = (state.header.align==='right' ? 'flex-end' : (state.header.align==='center' ? 'center' : 'flex-start'));
+    } else {
+      logoPreviewWrap.innerHTML = '<div class="muted">Arraste a logo aqui</div>';
+      logoArea.innerHTML = '<div class="muted" style="font-size:12px">Logo</div>';
+    }
+  }
+
+  // ---------- Questões: parse / render / CRUD ----------
+  function parseBulkText(text){
+    // Separar por linhas, detectar padrões de numeração no início
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const qs=[]; let current=null;
+    const regex = /^(\d+)[\).\-\s]+(.*)$/;
+    for(const ln of lines){
+      const m = ln.match(regex);
+      if(m){ if(current) qs.push(current); current = {text:m[2],lines:3,image:null,choices:null,answer:null}; }
+      else { if(current) current.text += '\n'+ln; else current = {text:ln,lines:3,image:null,choices:null,answer:null}; }
+    }
+    if(current) qs.push(current);
+    return qs;
+  }
+
+  function setupButtons(){
+    parseBtn.addEventListener('click',()=>{
+      const parsed = parseBulkText(bulkQuestions.value);
+      if(parsed.length===0){alert('Nenhuma questão detectada. Certifique-se de que há numeração no texto ou use "Adicionar questão".'); return}
+      state.questions = state.questions.concat(parsed);
+      renderQuestionsEditor(); saveState(); renderPreview();
+    });
+
+    addQbtn.addEventListener('click', ()=>{ state.questions.push({text:'Nova questão',lines:3,image:null,choices:null,answer:null}); renderQuestionsEditor(); saveState(); renderPreview(); });
+
+    loadExample1Btn.addEventListener('click', ()=>{
+      state.questions = [{text:'Qual é a capital do Brasil?',lines:2,image:null,choices:null,answer:null},{text:'Resolva: 2+2 = ?',lines:2,image:null,choices:null,answer:null}]; renderQuestionsEditor(); saveState(); renderPreview();
+    });
+    loadExample2Btn.addEventListener('click', ()=>{
+      state.questions = [{text:'1. Qual a cor do céu?\nA) Verde\nB) Azul\nC) Amarelo\nD) Vermelho',lines:0,image:null,choices:['A','B','C','D'],answer:1},{text:'2. Quem descobriu o Brasil?\nA) Cristóvão Colombo\nB) Pedro Álvares Cabral\nC) Vasco da Gama\nD) Dom Pedro',lines:0,image:null,choices:['A','B','C','D'],answer:1}]; renderQuestionsEditor(); saveState(); renderPreview();
+    });
+
+    exportPdfBtn.addEventListener('click', ()=>{ exportPDF(false); });
+    exportGabaritoBtn.addEventListener('click', ()=>{ exportPDF(true); });
+    clearAllBtn.addEventListener('click', ()=>{ if(confirm('Limpar tudo? Esta ação remove o conteúdo salvo localmente.')){ state = JSON.parse(JSON.stringify(stateDefault)); saveState(); syncEditorHeader(); renderQuestionsEditor(); renderPreview(); renderLogo(); } });
+    toggleThemeBtn.addEventListener('click', ()=>{ state.theme = state.theme==='light'?'dark':'light'; applyTheme(); saveState(); });
+  }
+
+  function renderQuestionsEditor(){
+    questionsList.innerHTML='';
+    state.questions.forEach((q,idx)=>{
+      const el = document.createElement('div'); el.className='question';
+      const left = document.createElement('div'); left.className='q-left'; left.innerText = (idx+1)+'.';
+      const body = document.createElement('div'); body.className='q-body';
+      const qtext = document.createElement('div'); qtext.className='q-text'; qtext.contentEditable = true; qtext.innerText = q.text; qtext.addEventListener('input', ()=>{ state.questions[idx].text = qtext.innerText; detectChoices(idx); saveState(); renderPreview(); });
+      body.appendChild(qtext);
+
+      // controls row
+      const controls = document.createElement('div'); controls.className='q-controls';
+      const linesLabel = document.createElement('label'); linesLabel.className='small'; linesLabel.innerText='Linhas:';
+      const linesSel = document.createElement('select'); for(let i=0;i<=5;i++){ const o = document.createElement('option'); o.value=i; o.innerText = i; if(q.lines===i)o.selected=true; linesSel.appendChild(o);} linesSel.addEventListener('change', ()=>{ state.questions[idx].lines=+linesSel.value; saveState(); renderPreview(); });
+      controls.appendChild(linesLabel); controls.appendChild(linesSel);
+
+      // image drop area per question
+      const imgWrap = document.createElement('div'); imgWrap.className='q-image'; imgWrap.style.minWidth='120px';
+      imgWrap.innerHTML = '<div class="muted small">Arraste/solte imagem aqui</div>';
+      imgWrap.addEventListener('dragover', e=>{e.preventDefault(); imgWrap.style.borderColor='rgba(11,99,214,0.5)'});
+      imgWrap.addEventListener('dragleave', e=>{e.preventDefault(); imgWrap.style.borderColor='' });
+      imgWrap.addEventListener('drop', e=>{ e.preventDefault(); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f){ handleQuestionImageFile(f, idx); } });
+
+      const uploadBtn = document.createElement('button'); uploadBtn.className='btn ghost small'; uploadBtn.textContent='Upload'; uploadBtn.onclick = ()=>{ const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.onchange = ()=>{ if(inp.files[0]) handleQuestionImageFile(inp.files[0], idx); }; inp.click(); };
+      controls.appendChild(uploadBtn);
+
+      const imgSizeLabel = document.createElement('label'); imgSizeLabel.className='small'; imgSizeLabel.innerText='Tamanho:';
+      const imgSlider = document.createElement('input'); imgSlider.type='range'; imgSlider.min=40; imgSlider.max=400; imgSlider.value = (q.image && q.image.width) ? q.image.width : 180;
+      imgSlider.addEventListener('input', ()=>{ if(state.questions[idx].image){ state.questions[idx].image.width = +imgSlider.value; saveState(); renderPreview(); } });
+      controls.appendChild(imgSizeLabel); controls.appendChild(imgSlider);
+
+      // duplicate / remove / reorder
+      const dupBtn = document.createElement('button'); dupBtn.className='btn ghost small'; dupBtn.textContent='Duplicar'; dupBtn.onclick = ()=>{ const clone = JSON.parse(JSON.stringify(state.questions[idx])); state.questions.splice(idx+1,0,clone); renderQuestionsEditor(); renderPreview(); saveState(); };
+      const upBtn = document.createElement('button'); upBtn.className='btn ghost small'; upBtn.textContent='↑'; upBtn.onclick = ()=>{ if(idx>0){ const tmp=state.questions[idx-1]; state.questions[idx-1]=state.questions[idx]; state.questions[idx]=tmp; renderQuestionsEditor(); renderPreview(); saveState(); }};
+      const downBtn = document.createElement('button'); downBtn.className='btn ghost small'; downBtn.textContent='↓'; downBtn.onclick = ()=>{ if(idx<state.questions.length-1){ const tmp=state.questions[idx+1]; state.questions[idx+1]=state.questions[idx]; state.questions[idx]=tmp; renderQuestionsEditor(); renderPreview(); saveState(); }};
+      const delBtn = document.createElement('button'); delBtn.className='btn ghost small'; delBtn.textContent='Remover'; delBtn.onclick = ()=>{ if(confirm('Remover esta questão?')){ state.questions.splice(idx,1); renderQuestionsEditor(); renderPreview(); saveState(); }};
+
+      controls.appendChild(dupBtn); controls.appendChild(upBtn); controls.appendChild(downBtn); controls.appendChild(delBtn);
+
+      body.appendChild(controls);
+
+      // add to element
+      el.appendChild(left);
+      el.appendChild(body);
+      el.appendChild(imgWrap);
+      questionsList.appendChild(el);
+
+      // render image if exists
+      if(q.image && q.image.data){ imgWrap.innerHTML = ''; const im = document.createElement('img'); im.src = q.image.data; im.style.width = (q.image.width || 180) + 'px'; imgWrap.appendChild(im); const rem = document.createElement('button'); rem.className='btn ghost small'; rem.textContent='Remover imagem'; rem.onclick=()=>{ state.questions[idx].image=null; renderQuestionsEditor(); renderPreview(); saveState(); }; imgWrap.appendChild(rem);}    
+
+      // detect choices
+      detectChoices(idx);
+    });
+  }
+
+  function handleQuestionImageFile(file, qidx){
+    if(!file.type.startsWith('image/')){alert('Arquivo deve ser imagem.');return}
+    if(file.size>3*1024*1024){alert('Imagem muito grande (máx 3MB).');return}
+    const r = new FileReader(); r.onload = ()=>{ state.questions[qidx].image = {data:r.result, width:180}; renderQuestionsEditor(); renderPreview(); saveState(); }; r.readAsDataURL(file);
+  }
+
+  function detectChoices(idx){
+    // tenta detectar padrões A) B) C) nas linhas
+    const text = state.questions[idx].text || '';
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const choices = []; const choicesRegex = /^([A-Z])\)\s*(.*)$/i; let found=false;
+    for(const ln of lines){ const m = ln.match(choicesRegex); if(m){ found=true; choices.push(m[2]); }}
+    if(found){ state.questions[idx].choices = choices; // default answer if not set
+      if(typeof state.questions[idx].answer!=='number') state.questions[idx].answer = null;
+    } else { state.questions[idx].choices = null; state.questions[idx].answer = null; }
+  }
+
+  // ---------- Preview rendering (A4) ----------
+  function renderPreview(){
+    syncPreviewHeader();
+    printQuestions.innerHTML='';
+    state.questions.forEach((q,idx)=>{
+      const qwrap = document.createElement('div'); qwrap.style.marginBottom='14px';
+      const qtitle = document.createElement('div'); qtitle.style.fontWeight='600'; qtitle.innerText = (idx+1)+'. ';
+      const qtext = document.createElement('div'); qtext.style.whiteSpace='pre-wrap'; qtext.innerText = q.text;
+      qwrap.appendChild(qtitle); qwrap.appendChild(qtext);
+      // imagem
+      if(q.image && q.image.data){ const iim = document.createElement('img'); iim.src=q.image.data; iim.style.maxWidth='100%'; iim.style.width = (q.image.width||180)+'px'; iim.style.display='block'; iim.style.marginTop='8px'; qwrap.appendChild(iim); }
+      // choices
+      if(q.choices){ const ul = document.createElement('div'); ul.style.marginTop='8px'; q.choices.forEach((c,ci)=>{ const ch = document.createElement('div'); ch.innerText = String.fromCharCode(65+ci)+') '+c; ul.appendChild(ch); }); qwrap.appendChild(ul); }
+      // linhas
+      if(q.lines && q.lines>0){ const linesDiv = document.createElement('div'); linesDiv.className='answer-lines'; for(let i=0;i<q.lines;i++){ const l = document.createElement('div'); l.className='answer-line'; l.style.height = '20px'; linesDiv.appendChild(l);} qwrap.appendChild(linesDiv); }
+      printQuestions.appendChild(qwrap);
+    });
+  }
+
+  // ---------- Export PDF / Gabarito ----------
+  function exportPDF(isGabarito){
+    // Clonar preview para manipular para PDF
+    const clone = document.getElementById('a4preview').cloneNode(true);
+    // se gabarito: replace questions area with respostas
+    if(isGabarito){
+      const qEls = clone.querySelectorAll('#printQuestions > div');
+      qEls.forEach((el,idx)=>{
+        const ans = state.questions[idx] && state.questions[idx].answer;
+        const resp = document.createElement('div'); resp.style.marginTop='8px'; resp.style.fontWeight='600'; resp.innerText = 'Gabarito: ' + ( (ans===null || ans===undefined) ? '-' : (typeof ans==='number' ? (String.fromCharCode(65+ans)) : ans) );
+        el.appendChild(resp);
       });
     }
-    // apply theme choice for PDF
-    const themeChoice = pdfTheme.value;
-    if (themeChoice === 'light') cloneWrap.classList.remove('dark');
-    else if (themeChoice === 'dark') cloneWrap.classList.add('dark');
-    else {
-      if (state.theme === 'dark') cloneWrap.classList.add('dark');
-      else cloneWrap.classList.remove('dark');
-    }
-
-    // create a container element to export (wrap clone in a printable page)
-    const exportEl = document.createElement('div');
-    exportEl.style.background = 'white';
-    exportEl.style.padding = '0';
-    exportEl.appendChild(cloneWrap);
-
-    // html2pdf options
+    // Options html2pdf
     const opt = {
-      margin: [10, 10, 10, 10],
-      filename: getExportFilename(includeGabarito ? 'Gabarito' : 'Prova'),
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale:1.5, useCORS:true, allowTaint:true, logging:false },
-      jsPDF: { unit:'pt', format:'a4', orientation:'portrait' }
+      margin: [10,10,10,10], filename: `${(state.header.schName||'Prova').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale:2, useCORS:true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    // ensure dark mode styles applied by copying document styles? Simple approach: add inline background white to page (done).
-    // Call html2pdf
-    try {
-      flash('Gerando PDF...');
-      await html2pdf().set(opt).from(exportEl).save();
-      flash('PDF gerado: ' + opt.filename);
-    } catch (e) {
-      console.error(e);
-      flash('Erro ao gerar PDF', true);
-    }
+    html2pdf().set(opt).from(clone).save();
   }
 
-  exportPdfBtnTop.addEventListener('click', ()=> exportPreviewAsPdf({ includeGabarito:false }));
-  exportPdfBtnBottom.addEventListener('click', ()=> exportPreviewAsPdf({ includeGabarito:false }));
-  exportGabaritoBtnTop.addEventListener('click', ()=> exportPreviewAsPdf({ includeGabarito:true }));
-  exportGabaritoBtnBottom.addEventListener('click', ()=> exportPreviewAsPdf({ includeGabarito:true }));
+  // ---------- Apply theme ----------
+  function applyTheme(){ document.documentElement.setAttribute('data-theme', state.theme || 'light'); }
 
-  // ---------- load saved on start ----------
-  (function init() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        state = JSON.parse(raw);
-      } catch (e) {
-        console.warn('localStorage parse falhou, usando estado padrão', e);
-      }
-    } else {
-      // seed with example questions for first-time users
-      state.questions = [
-        { id: rndId('q'), text: 'Leia o texto I e responda: Qual é o objetivo do texto I?', lines:3, imageData:null, imageScale:70, alternatives:null, correct:[], shortAnswer:'' },
-        { id: rndId('q'), text: 'Leia o texto II e responda: Qual é a orientação dada no segundo texto?', lines:4, imageData:null, imageScale:70, alternatives:null, correct:[], shortAnswer:'' },
-        { id: rndId('q'), text: 'O que os pôsteres apresentados têm em comum?', lines:3, imageData:null, imageScale:70, alternatives:['Eles oferecem orientações para evitar a propagação da covid-19.','São campanhas não governamentais.'], correct:[], shortAnswer:'' }
-      ];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-    renderAll();
-  })();
+  // ---------- Utilities ----------
+  function renderPreviewDebounced(){ renderPreview(); }
 
-  // expose some helpers for debugging (window)
-  window.geradorProvas = {
-    state,
-    save: () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state)),
-    load: () => {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) state = JSON.parse(raw);
-    }
-  };
+  // ---------- Start ----------
+  init();
+  // render initial values
+  syncEditorHeader(); renderQuestionsEditor(); renderPreview();
 
-  // small helpers used earlier in renderer scope (duplicated for closure)
-  function renderQuestionsList() {
-    const list = qs('#questionsList');
-    list.innerHTML = '';
-    state.questions.forEach((q, idx) => {
-      const div = document.createElement('div');
-      div.className='q-card';
-      div.dataset.id=q.id;
-      const num = document.createElement('div'); num.className='q-num'; num.textContent=(idx+1)+'.';
-      const body = document.createElement('div'); body.className='q-body';
-      const text = document.createElement('div'); text.className='inline-editable'; text.contentEditable=true; text.innerText=q.text||'';
-      text.oninput = ()=> { q.text = text.innerText; scheduleSave(); renderPreview(); };
-      body.appendChild(text);
-      // small action buttons
-      const actions = document.createElement('div'); actions.className='q-actions';
-      const dup = document.createElement('button'); dup.className='small-btn ghost'; dup.textContent='Duplicar';
-      dup.onclick = ()=> { const copy = JSON.parse(JSON.stringify(q)); copy.id=rndId('q'); state.questions.splice(idx+1,0,copy); scheduleSave(); renderAll(); };
-      const rem = document.createElement('button'); rem.className='small-btn ghost'; rem.textContent='Remover';
-      rem.onclick = ()=> { if (!confirm('Remover questão?')) return; state.questions.splice(idx,1); scheduleSave(); renderAll(); };
-      const up = document.createElement('button'); up.className='small-btn ghost'; up.textContent='↑'; up.onclick = ()=> { if (idx===0) return; const [it]=state.questions.splice(idx,1); state.questions.splice(idx-1,0,it); scheduleSave(); renderAll(); };
-      const down = document.createElement('button'); down.className='small-btn ghost'; down.textContent='↓'; down.onclick = ()=> { if (idx===state.questions.length-1) return; const [it]=state.questions.splice(idx,1); state.questions.splice(idx+1,0,it); scheduleSave(); renderAll(); };
-      actions.appendChild(dup); actions.appendChild(rem); actions.appendChild(up); actions.appendChild(down);
-      body.appendChild(actions);
-      list.appendChild(num); list.appendChild(body);
-    });
-    qs('#totalCount').textContent = state.questions.length;
-  }
-
-  function renderPreview() {
-    // reuse earlier implementation: regenerate innerHTML for previewContainer
-    const header = state.header;
-    const container = qs('#previewContainer');
-    container.innerHTML = ''; // clear
-    // paper
-    const paper = document.createElement('div');
-    paper.style.width='100%'; paper.style.height='100%';
-    // header
-    const ph = document.createElement('div'); ph.className='paper-header';
-    const logo = document.createElement('div'); logo.className='logo';
-    if (header.logoData) { const img=document.createElement('img'); img.src=header.logoData; img.style.maxWidth='100%'; img.style.maxHeight='100%'; logo.appendChild(img); } else { const sp=document.createElement('div'); sp.className='muted'; sp.textContent='LOGO'; logo.appendChild(sp); }
-    ph.appendChild(logo);
-    const meta = document.createElement('div'); meta.className='meta';
-    meta.innerHTML = `<div class="item"><div class="label">Escola: </div><div>${header.school}</div></div>
-                      <div class="item"><div class="label">Professor(a): </div><div>${header.teacher}</div></div>
-                      <div class="item"><div class="label">Componente: </div><div>${header.component}</div></div>
-                      <div class="item"><div class="label">Ano/Turma: </div><div>${header.class}</div></div>
-                      <div class="item"><div class="label">Aluno(a): </div><div>${header.student}</div></div>
-                      <div class="item"><div class="label">Data: </div><div>${header.date}</div></div>
-                      <div class="item"><div class="label">Nota: </div><div>${header.grade}</div></div>`;
-    ph.appendChild(meta);
-    paper.appendChild(ph);
-    // body
-    const body = document.createElement('div'); body.className='paper-body';
-    state.questions.forEach((q, idx) => {
-      const pq = document.createElement('div'); pq.className='paper-q';
-      const qtext = document.createElement('div'); qtext.className='q-text'; qtext.textContent = (idx+1)+'. ' + (q.text||'');
-      pq.appendChild(qtext);
-      if (q.imageData) {
-        const img = document.createElement('img'); img.src=q.imageData; img.style.maxWidth=(q.imageScale||70)+'%'; img.style.display='block'; img.style.margin='8px 0'; pq.appendChild(img);
-      }
-      if (q.alternatives && q.alternatives.length) {
-        const altList = document.createElement('div'); altList.className='alt-list';
-        q.alternatives.forEach((alt, ai) => {
-          const altItem = document.createElement('div'); altItem.className='alt-item'; altItem.textContent = String.fromCharCode(65+ai)+'. ' + alt;
-          altList.appendChild(altItem);
-        });
-        pq.appendChild(altList);
-      }
-      const linesWrap = document.createElement('div'); linesWrap.className='response-lines';
-      const lines = Math.max(1, Math.min(5, q.lines || 3));
-      for (let i=0;i<lines;i++){
-        const ln = document.createElement('div'); ln.className='response-line'; ln.style.minHeight='16px';
-        linesWrap.appendChild(ln);
-      }
-      pq.appendChild(linesWrap);
-      body.appendChild(pq);
-    });
-    paper.appendChild(body);
-    container.appendChild(paper);
-    container.style.textAlign = header.align || 'left';
-    document.documentElement.classList.toggle('dark', state.theme==='dark');
-  }
-
-})();
-</script>
-
-</body>
+  </script></body>
 </html>
