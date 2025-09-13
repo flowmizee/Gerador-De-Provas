@@ -1,666 +1,785 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="antialiased">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Provas</title>
-
-    <!-- Fonte e Tailwind (CDN) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
     <style>
-        /* Reset / fontes */
-        :root { --bg:#F8FAFC; --card:#FFFFFF; --muted:#6B7280; --accent:#0EA5A4; --text:#0F172A; }
-        html,body { height:100%; margin:0; font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
-        body { background:var(--bg); color:var(--text); transition:background-color .25s,color .25s; }
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dark {
+            @apply bg-gray-900 text-gray-100;
+        }
 
-        /* Dark theme (manual CSS to avoid using @apply) */
-        .dark { background:#0b1220; color:#e6eef6; }
-        .dark .card { background:#071027; }
-        .dark .muted { color:#94a3b8; }
-        .dark .border-light { border-color:#273444; }
-        .dark .logo-placeholder { color:#94a3b8; }
+        .dark .bg-white {
+            @apply bg-gray-800;
+        }
 
-        /* Layout geral */
-        .container { max-width:1100px; margin:20px auto; padding:18px; }
-        .card { background:var(--card); border-radius:10px; padding:18px; box-shadow:0 8px 24px rgba(2,6,23,0.06); border:1px solid rgba(15,23,42,0.06); }
-        .small { font-size:13px; color:var(--muted); }
+        .dark .bg-gray-50 {
+            @apply bg-gray-700;
+        }
 
-        /* Header (logo + info) */
-        #logo-container { cursor:pointer; width:120px; height:92px; border:2px dashed #CBD5E1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:white; }
-        #logo-container.drag { border-color:#60A5FA; background:#F1F5F9; }
-        #logo-preview { width:100%; height:100%; object-fit:contain; display:block; }
+        .dark .text-gray-900 {
+            @apply text-gray-100;
+        }
+        
+        .dark .border-gray-200 {
+            @apply border-gray-700;
+        }
+        
+        .dark input, .dark textarea {
+            @apply bg-gray-700 text-gray-100 border-gray-600 placeholder-gray-400;
+        }
 
-        /* Header text */
-        .header-field { font-size:18px; line-height:1.1; }
-        .header-sub { font-size:15px; }
+        .dark .drag-highlight {
+            @apply border-blue-400 bg-gray-700;
+        }
 
-        /* Question area */
-        #question-list { margin-top:12px; }
-        .question-card { position:relative; border-radius:10px; border:1px solid rgba(15,23,42,0.04); padding:14px; background:var(--card); }
-        .question-number { font-weight:700; color:#0EA5A4; margin-right:8px; font-size:18px; }
+        [contenteditable]:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
 
-        /* Lines that appear in preview and export */
+        .fillable-line {
+            display: inline-block;
+            vertical-align: middle;
+            border-bottom: 1px solid currentColor;
+            margin-left: 0.5rem;
+            min-width: 150px;
+        }
+
+        .short-line {
+            min-width: 50px;
+        }
+
+        .date-line {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .date-line .line {
+            border-bottom: 1px solid currentColor;
+            display: inline-block;
+            width: 25px;
+        }
+        
+        .date-line .separator {
+            padding: 0 2px;
+        }
+
         .question-line {
-            border-bottom: 1.5px solid #000;
-            height: 28px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
+            border-bottom: 2px solid #ccc;
+            min-height: 1.2rem;
+            line-height: 1.2rem;
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
         }
 
-        /* Print area styling (A4) */
-        #print-area, #gabarito-area {
-            width:210mm;
-            height:297mm;
-            box-sizing:border-box;
-            padding:16mm;
-            background:#fff;
-            overflow:hidden; /* Important: clip extra content so export is 1 page */
-        }
-        /* Paper header inside print */
-        .paper-header { display:flex; gap:12px; align-items:flex-start; border-bottom:1px solid rgba(0,0,0,0.12); padding-bottom:8px; margin-bottom:12px; }
-        .paper-logo { height:84px; width:auto; object-fit:contain; display:block; }
-
-        /* small util */
-        .no-print { }
-        .hidden { display:none; }
-
-        /* Message box */
-        #message-box { min-width:180px; max-width:320px; }
-
-        /* Responsive */
-        @media(max-width:900px){
-            #logo-container { width:96px; height:72px; margin-bottom:8px; }
-            .header-field { font-size:16px; }
-            #print-area, #gabarito-area { width:100%; height:auto; padding:16px; }
+        .print-preview {
+            display: none;
         }
 
-        /* Print media (for direct print, but export uses the #print-area element) */
+        /* Estilos para impressão */
         @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left:0; top:0; }
+            body {
+                @apply bg-white text-gray-900;
+            }
+            body, html {
+                margin: 0;
+                padding: 0;
+                width: 210mm; /* A4 width */
+                min-height: 297mm; /* A4 height */
+            }
+            .print-preview {
+                display: block !important;
+                margin: 0;
+                padding: 0;
+                width: 210mm;
+                min-height: 297mm;
+                box-shadow: none;
+            }
+            #app {
+                display: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+
+            .page-break {
+                page-break-after: always;
+            }
+
+            .question-line {
+                border-bottom: 2px solid #000;
+                min-height: 1.2rem;
+                line-height: 1.2rem;
+                margin-top: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .answer-key-correct {
+                @apply bg-green-200 text-green-900 font-bold p-1 rounded-md;
+            }
         }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 transition-colors duration-300">
-    <div class="container">
-        <!-- Main app -->
-        <div id="app">
+<!-- Main Application UI -->
+<div id="app" class="p-6 md:p-10 max-w-4xl mx-auto">
+    <div class="flex justify-end mb-4">
+        <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+        </button>
+    </div>
 
-            <div class="flex justify-end mb-4">
-                <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 transition-colors duration-200" title="Tema claro/escuro">
-                    <!-- moon icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Header card: logo + fields -->
-            <div class="card mb-6">
-                <div class="flex flex-col md:flex-row items-start gap-6">
-                    <!-- Logo -->
-                    <div class="flex-shrink-0">
-                        <div id="logo-container" aria-label="Logo da escola (clique para enviar ou arraste a imagem)">
-                            <input id="logo-upload" type="file" accept="image/*" class="hidden" />
-                            <img id="logo-preview" src="" alt="Logo" style="display:none;">
-                            <div id="logo-placeholder" class="logo-placeholder text-sm text-gray-500 text-center px-2">Arraste ou clique para adicionar a logo</div>
-                        </div>
-                        <div class="mt-2 text-xs small text-gray-500">Altura da logo ajusta-se automaticamente</div>
-                    </div>
-
-                    <!-- Header info -->
-                    <div id="header-info" class="flex-1">
-                        <div class="flex justify-end items-center gap-2 mb-3">
-                            <span class="small text-gray-600">Alinhamento:</span>
-                            <div class="flex items-center gap-1">
-                                <button id="align-left" class="px-2 py-1 rounded hover:bg-gray-100 text-sm">Esq</button>
-                                <button id="align-center" class="px-2 py-1 rounded hover:bg-gray-100 text-sm">Cen</button>
-                                <button id="align-right" class="px-2 py-1 rounded hover:bg-gray-100 text-sm">Dir</button>
-                            </div>
-                        </div>
-
-                        <div id="header-text-container" class="text-right">
-                            <div class="header-field" data-key="schoolName" contenteditable="true">NOME DA ESCOLA</div>
-                            <div class="header-sub header-field" data-key="student" contenteditable="true">ALUNO(A): ________________________________</div>
-                            <div class="header-sub header-field" data-key="teacher" contenteditable="true">PROFESSOR(A): ________________________________</div>
-                            <div class="header-sub header-field" data-key="subject" contenteditable="true">COMPONENTE CURRICULAR: __________________</div>
-                            <div class="header-sub header-field" data-key="info" contenteditable="true">ANO/TURMA: _______  DATA: ___/___/____</div>
-                        </div>
-                    </div>
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
+        <div class="flex flex-col md:flex-row items-center md:items-start justify-between">
+            <!-- Logo -->
+            <div class="w-full md:w-1/4 flex-shrink-0 mb-4 md:mb-0">
+                <div id="logo-container" class="cursor-pointer relative w-24 h-24 mx-auto md:mx-0 p-2 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden">
+                    <input type="file" id="logo-upload" class="hidden" accept="image/*">
+                    <img id="logo-preview" class="w-full h-full object-contain" src="" alt="Logo" style="display: none;">
+                    <span id="logo-placeholder" class="text-center text-xs text-gray-500">Arraste ou clique para adicionar a logo</span>
                 </div>
             </div>
-
-            <!-- Paste / process area -->
-            <div class="card mb-6">
-                <h2 class="text-lg font-semibold mb-2">Analisar Questões</h2>
-                <p class="small mb-3">Cole o texto das questões no campo abaixo. O sistema reconhecerá numeração como <code>1.</code>, <code>1)</code>, <code>1 -</code> e dividirá em questões.</p>
-                <textarea id="question-input" rows="8" class="w-full border rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-vertical" placeholder="Cole suas questões aqui..."></textarea>
-
-                <div class="flex gap-3 mt-4">
-                    <button id="process-questions" class="bg-blue-600 text-white px-4 py-2 rounded font-semibold">Analisar e Gerar</button>
-                    <button id="add-manual" class="bg-gray-200 px-4 py-2 rounded">Adicionar Questão Manual</button>
+            
+            <!-- Header Info -->
+            <div id="header-info" class="w-full md:w-3/4 flex-grow space-y-2 text-right">
+                <div class="flex items-center space-x-2 justify-end">
+                    <span class="text-sm font-semibold text-gray-600">Alinhamento:</span>
+                    <button id="align-left" class="p-1 rounded hover:bg-gray-200"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 3a1 1 0 100 2h12a1 1 0 100-2H4zm-1 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
+                    <button id="align-center" class="p-1 rounded hover:bg-gray-200"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zm-1 7a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3-4a1 1 0 100 2h8a1 1 0 100-2H6zm0 7a1 1 0 100 2h8a1 1 0 100-2H6z" /></svg></button>
+                    <button id="align-right" class="p-1 rounded hover:bg-gray-200"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16 4a1 1 0 01-1 1H3a1 1 0 110-2h12a1 1 0 011 1zm0 4a1 1 0 01-1 1H3a1 1 0 110-2h12a1 1 0 011 1zm-1 3a1 1 0 100 2H3a1 1 0 100-2h12zm-1 4a1 1 0 01-1 1H3a1 1 0 110-2h12a1 1 0 011 1z" clip-rule="evenodd" /></svg></button>
+                </div>
+                <div id="header-text-container" class="space-y-1">
+                    <div class="header-field text-lg font-bold" data-key="schoolName" contenteditable="true">Nome da Escola</div>
+                    <div class="header-field text-lg font-bold" data-key="student">Aluno(a): <span class="fillable-line"></span></div>
+                    <div class="header-field text-lg font-bold" data-key="teacher" contenteditable="true">Professor(a):</div>
+                    <div class="header-field text-lg font-bold" data-key="subject" contenteditable="true">Componente curricular:</div>
+                    <div class="header-field text-lg font-bold" data-key="info">Ano/Turma: <span class="fillable-line short-line"></span> Data: <span class="date-line"><span class="line"></span><span class="separator">/</span><span class="line"></span><span class="separator">/</span><span class="line"></span></span></div>
                 </div>
             </div>
-
-            <!-- Question list -->
-            <div id="question-list" class="space-y-4"></div>
-
-            <!-- Controls -->
-            <div class="flex gap-3 mt-6">
-                <button id="export-pdf" class="bg-green-600 text-white px-6 py-3 rounded font-semibold">Gerar Prova PDF</button>
-                <button id="export-gabarito" class="bg-yellow-500 text-black px-6 py-3 rounded font-semibold">Gerar Gabarito PDF</button>
-                <button id="clear-exam" class="bg-red-500 text-white px-6 py-3 rounded font-semibold">Limpar Prova</button>
-            </div>
-
-            <!-- Message box -->
-            <div id="message-box" class="fixed bottom-6 right-6 hidden"></div>
         </div>
     </div>
 
-    <!-- Hidden A4 Print Preview Area (single page) -->
-    <div id="print-area" class="hidden"></div>
+    <!-- Exam Title -->
+    <div id="exam-title" class="text-xl font-bold text-center mb-6" contenteditable="true">Título da Prova</div>
 
-    <!-- Hidden Answer Key Area -->
-    <div id="gabarito-area" class="hidden"></div>
+    <!-- Question Paste Area -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
+        <h2 class="text-xl font-bold mb-4">Analisar Questões</h2>
+        <p class="text-sm text-gray-500 mb-2">Cole o texto da sua prova aqui para que ele seja processado automaticamente.</p>
+        <textarea id="question-input" rows="10" class="w-full p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y" placeholder="Cole suas questões aqui..."></textarea>
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4">
+            <button id="process-questions" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
+                Analisar e Gerar
+            </button>
+            <button id="add-manual" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
+                Adicionar Questão Manual
+            </button>
+        </div>
+    </div>
 
-    <script>
-        /* ---------- Estado inicial ---------- */
-        const stateKey = 'examGeneratorState_v2';
-        const state = {
-            header: {
-                logo: '',
-                alignment: 'text-right',
-                schoolName: 'NOME DA ESCOLA',
-                student: 'ALUNO(A): ___________________________',
-                teacher: 'PROFESSOR(A): _______________________',
-                subject: 'COMPONENTE CURRICULAR: ____________',
-                info: 'ANO/TURMA: ___  DATA: __/__/____'
-            },
-            questions: [],
-            theme: 'light'
-        };
+    <!-- Question List -->
+    <div id="question-list" class="space-y-6">
+        <!-- Questions will be dynamically added here -->
+    </div>
+    
+    <!-- Controls and PDF Export -->
+    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 mt-8">
+        <button id="export-pdf" class="flex-grow bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
+            Gerar Prova PDF
+        </button>
+        <button id="clear-exam" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
+            Limpar Prova
+        </button>
+    </div>
 
-        let saveTimeout = null;
+    <!-- Message Box -->
+    <div id="message-box" class="fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white font-semibold transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+</div>
 
-        /* ---------- Helpers ---------- */
-        function showMessage(msg, type = 'info') {
-            const box = document.getElementById('message-box');
-            box.textContent = msg;
-            box.className = 'fixed bottom-6 right-6 p-3 rounded shadow-lg text-white font-semibold';
-            if (type === 'success') box.style.background = '#10B981';
-            else if (type === 'error') box.style.background = '#EF4444';
-            else box.style.background = '#3B82F6';
-            box.style.opacity = '1';
-            box.style.display = 'block';
-            setTimeout(() => {
-                box.style.opacity = '0';
-                setTimeout(()=> box.style.display = 'none', 300);
-            }, 2600);
+<!-- Hidden A4 Print Preview Area -->
+<div id="print-area" class="w-[210mm] min-h-[297mm] p-8 mx-auto bg-white shadow-xl">
+    <!-- Content will be rendered here for PDF export -->
+</div>
+
+<script>
+    // --- Estrutura de dados e estado do aplicativo ---
+    const state = {
+        header: {
+            logo: '',
+            alignment: 'text-right',
+            schoolName: 'Nome da Escola',
+            teacher: 'Professor(a):',
+            subject: 'Componente curricular:',
+        },
+        examTitle: 'Título da Prova',
+        questions: [],
+        theme: 'light'
+    };
+
+    let autoSaveTimeout = null;
+    
+    // --- Funções utilitárias ---
+
+    /**
+     * Exibe uma mensagem de notificação temporária.
+     * @param {string} message - A mensagem a ser exibida.
+     * @param {string} type - Tipo de mensagem ('success', 'error', 'info').
+     */
+    function showMessage(message, type = 'info') {
+        const msgBox = document.getElementById('message-box');
+        msgBox.textContent = message;
+        msgBox.className = 'fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white font-semibold transition-opacity duration-300 opacity-0 pointer-events-none';
+        
+        switch (type) {
+            case 'success':
+                msgBox.classList.add('bg-green-500');
+                break;
+            case 'error':
+                msgBox.classList.add('bg-red-500');
+                break;
+            case 'info':
+            default:
+                msgBox.classList.add('bg-blue-500');
+                break;
         }
+        
+        msgBox.classList.remove('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            msgBox.classList.add('opacity-0', 'pointer-events-none');
+        }, 3000);
+    }
+    
+    /** Salva o estado atual no localStorage com um debounce. */
+    function saveState() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            localStorage.setItem('examGeneratorState', JSON.stringify(state));
+            console.log('Estado salvo automaticamente.');
+        }, 500);
+    }
 
-        function saveState() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                try {
-                    localStorage.setItem(stateKey, JSON.stringify(state));
-                    console.log('Estado salvo');
-                } catch (e) {
-                    console.error('Erro salvando estado', e);
-                }
-            }, 350);
-        }
-
-        function loadState() {
-            try {
-                const raw = localStorage.getItem(stateKey);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    Object.assign(state, parsed);
-                } else {
-                    // exemplo inicial
-                    state.header.schoolName = 'Unidade Integrada José Joaquim de Araújo';
-                    state.header.student = 'ALUNO(A): ___________________________';
-                    state.header.teacher = 'PROFESSOR(A): RENIMAR ALMEIDA';
-                    state.header.subject = 'COMPONENTE CURRICULAR: INGLÊS';
-                    state.header.info = 'ANO/TURMA: ______  DATA: __/__/____';
-                    state.questions = [
-                        { id: crypto.randomUUID(), text: '1. Escreva seu nome completo.', image: '', imageSize: 100, lines: 1, isAnswerKey:false },
-                        { id: crypto.randomUUID(), text: '2. Traduza para o inglês: "Bom dia".', image: '', imageSize: 100, lines: 2, isAnswerKey:false }
-                    ];
-                }
-            } catch (e) { console.error('Erro ao carregar estado', e); }
-        }
-
-        /* ---------- Render Header ---------- */
-        function renderHeader() {
-            const headerContainer = document.getElementById('header-text-container');
-            headerContainer.className = `${state.header.alignment}`;
-            const keys = ['schoolName','student','teacher','subject','info'];
-            keys.forEach(k => {
-                const el = headerContainer.querySelector(`[data-key="${k}"]`);
-                if (el) el.textContent = state.header[k];
-            });
-
-            // logo
-            const logoPreview = document.getElementById('logo-preview');
-            const logoPlaceholder = document.getElementById('logo-placeholder');
-            if (state.header.logo) {
-                logoPreview.src = state.header.logo;
-                logoPreview.style.display = 'block';
-                logoPlaceholder.style.display = 'none';
-            } else {
-                logoPreview.style.display = 'none';
-                logoPlaceholder.style.display = 'block';
-            }
-
-            // highlight align buttons
-            ['left','center','right'].forEach(pos => {
-                const btn = document.getElementById(`align-${pos}`);
-                btn.classList.remove('bg-gray-200');
-                if (state.header.alignment === `text-${pos}`) btn.classList.add('bg-gray-200');
-            });
-        }
-
-        /* ---------- Render Questions (editor) ---------- */
-        function renderQuestions() {
-            const list = document.getElementById('question-list');
-            list.innerHTML = '';
-            state.questions.forEach((q, idx) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'question-card card';
-                wrapper.dataset.id = q.id;
-                wrapper.id = `question-${q.id}`;
-
-                // build html
-                wrapper.innerHTML = `
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center">
-                            <div class="question-number">${idx + 1}.</div>
-                            <div contenteditable="true" class="question-text border border-transparent focus:border-blue-200 p-1" data-id="${q.id}">${escapeHtml(q.text)}</div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button class="duplicate-btn" title="Duplicar">Duplicar</button>
-                            <button class="move-up-btn" title="Mover para cima">↑</button>
-                            <button class="move-down-btn" title="Mover para baixo">↓</button>
-                            <button class="remove-btn text-red-600" title="Remover">Remover</button>
-                        </div>
-                    </div>
-                    ${ q.image ? `
-                        <div class="mb-3">
-                            <img src="${q.image}" style="width:${q.imageSize}%;" class="rounded shadow" alt="Imagem da questão" />
-                            <div class="mt-2 flex items-center gap-2">
-                                <input type="range" min="10" max="100" value="${q.imageSize}" data-id="${q.id}" class="image-size-slider"/>
-                                <button class="remove-image-btn" data-id="${q.id}">Remover imagem</button>
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="mb-3 text-sm text-gray-500">Arraste uma imagem sobre este cartão ou clique nele para enviar (opcional).</div>
-                    `}
-                    <div class="mb-1">Número de linhas: <span class="font-semibold">${q.lines}</span></div>
-                    <input type="range" min="0" max="10" value="${q.lines}" data-id="${q.id}" class="response-lines-slider w-full"/>
-                `;
-
-                // allow dropping images on the card
-                wrapper.addEventListener('dragover', (ev) => { ev.preventDefault(); wrapper.classList.add('drag'); });
-                wrapper.addEventListener('dragleave', (ev) => { wrapper.classList.remove('drag'); });
-                wrapper.addEventListener('drop', (ev) => {
-                    ev.preventDefault(); wrapper.classList.remove('drag');
-                    const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
-                    if (f && f.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            q.image = e.target.result;
-                            q.imageSize = 100;
-                            saveState();
-                            renderQuestions();
-                            showMessage('Imagem adicionada à questão', 'success');
-                        };
-                        reader.readAsDataURL(f);
-                    } else {
-                        showMessage('Solte uma imagem válida.', 'error');
-                    }
-                });
-
-                list.appendChild(wrapper);
-            });
-
-            //listeners after render
-            setupQuestionListeners();
-        }
-
-        /* ---------- Question Listeners ---------- */
-        function setupQuestionListeners() {
-            // text edits
-            document.querySelectorAll('.question-text').forEach(el => {
-                el.addEventListener('input', (e) => {
-                    const id = e.target.dataset.id;
-                    const q = state.questions.find(x => x.id === id);
-                    if (q) { q.text = e.target.textContent; saveState(); }
-                });
-            });
-
-            // response lines slider
-            document.querySelectorAll('.response-lines-slider').forEach(el => {
-                el.addEventListener('input', (e) => {
-                    const id = e.target.dataset.id;
-                    const q = state.questions.find(x => x.id === id);
-                    if (q) {
-                        q.lines = parseInt(e.target.value,10);
-                        saveState();
-                        renderQuestions(); // to update displayed number
-                    }
-                });
-            });
-
-            // image-size slider
-            document.querySelectorAll('.image-size-slider').forEach(el => {
-                el.addEventListener('input', (e) => {
-                    const id = e.target.dataset.id;
-                    const q = state.questions.find(x => x.id === id);
-                    if (q) {
-                        q.imageSize = parseInt(e.target.value,10);
-                        saveState();
-                        renderQuestions();
-                    }
-                });
-            });
-
-            // remove image
-            document.querySelectorAll('.remove-image-btn').forEach(b => {
-                b.addEventListener('click', (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const q = state.questions.find(x => x.id === id);
-                    if (q) { q.image = ''; q.imageSize = 100; saveState(); renderQuestions(); }
-                });
-            });
-
-            // duplicate
-            document.querySelectorAll('.duplicate-btn').forEach(b => {
-                b.addEventListener('click', (e) => {
-                    const card = e.currentTarget.closest('.question-card');
-                    const id = card.dataset.id;
-                    const idx = state.questions.findIndex(x => x.id === id);
-                    if (idx !== -1) {
-                        const copy = JSON.parse(JSON.stringify(state.questions[idx]));
-                        copy.id = crypto.randomUUID();
-                        state.questions.splice(idx+1,0,copy);
-                        saveState(); renderQuestions(); showMessage('Questão duplicada', 'success');
-                    }
-                });
-            });
-
-            // remove
-            document.querySelectorAll('.remove-btn').forEach(b => {
-                b.addEventListener('click', (e) => {
-                    const card = e.currentTarget.closest('.question-card');
-                    const id = card.dataset.id;
-                    state.questions = state.questions.filter(x => x.id !== id);
-                    saveState(); renderQuestions(); showMessage('Questão removida', 'info');
-                });
-            });
-
-            // move up / down
-            document.querySelectorAll('.move-up-btn').forEach(b => {
-                b.addEventListener('click', (e) => {
-                    const id = e.currentTarget.closest('.question-card').dataset.id;
-                    const idx = state.questions.findIndex(x => x.id === id);
-                    if (idx > 0) { const [q] = state.questions.splice(idx,1); state.questions.splice(idx-1,0,q); saveState(); renderQuestions(); }
-                });
-            });
-            document.querySelectorAll('.move-down-btn').forEach(b => {
-                b.addEventListener('click', (e) => {
-                    const id = e.currentTarget.closest('.question-card').dataset.id;
-                    const idx = state.questions.findIndex(x => x.id === id);
-                    if (idx < state.questions.length - 1) { const [q] = state.questions.splice(idx,1); state.questions.splice(idx+1,0,q); saveState(); renderQuestions(); }
-                });
-            });
-
-            // allow clicking on card to upload image
-            document.querySelectorAll('.question-card').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    // only trigger if clicking on background (not on buttons)
-                    if (e.target.closest('button')) return;
-                    const id = card.dataset.id;
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (ev) => {
-                        const f = ev.target.files[0];
-                        if (f && f.type.startsWith('image/')) {
-                            const reader = new FileReader();
-                            reader.onload = (r) => {
-                                const q = state.questions.find(x => x.id === id);
-                                if (q) { q.image = r.target.result; q.imageSize = 100; saveState(); renderQuestions(); showMessage('Imagem adicionada', 'success'); }
-                            };
-                            reader.readAsDataURL(f);
-                        } else showMessage('Escolha uma imagem válida', 'error');
-                    };
-                    input.click();
-                });
-            });
-        }
-
-        /* ---------- Process pasted text -> questions ---------- */
-        function processPastedText() {
-            const text = document.getElementById('question-input').value.trim();
-            if (!text) { showMessage('Nenhum texto encontrado.', 'error'); return; }
-
-            // normalize line endings and ensure split by question numbers
-            // We'll capture blocks that start with a number + dot / ) / -
-            const lines = text.split(/\r?\n/);
-            const joined = lines.join('\n');
-            // Add a marker before each new question start
-            const splitted = joined.split(/(?=\n?\s*\d+\s*(?:\.|\)|-))/g).map(s => s.trim()).filter(Boolean);
-
-            const newQuestions = [];
-            for (const block of splitted) {
-                // remove a leading number and separator
-                const m = block.match(/^\s*\d+\s*(?:\.|\)|-)?\s*(.*)$/s);
-                const content = m ? m[1].trim() : block.trim();
-                if (content) {
-                    newQuestions.push({
-                        id: crypto.randomUUID(),
-                        text: content,
-                        image: '',
-                        imageSize: 100,
-                        lines: 3,
-                        isAnswerKey: false
-                    });
-                }
-            }
-
-            if (newQuestions.length === 0) { showMessage('Não foram detectadas questões no texto.', 'error'); return; }
-            state.questions = state.questions.concat(newQuestions);
-            document.getElementById('question-input').value = '';
-            saveState();
-            renderQuestions();
-            showMessage(`Geradas ${newQuestions.length} questão(ões).`, 'success');
-        }
-
-        /* ---------- Render printable content (single A4 page) ---------- */
-        function renderPrintableContent(isGabarito = false) {
-            const target = isGabarito ? document.getElementById('gabarito-area') : document.getElementById('print-area');
-            // reset
-            target.innerHTML = '';
-            // Build header
-            const logoHtml = state.header.logo ? `<img src="${state.header.logo}" class="paper-logo" alt="logo">` : '';
-            const headerHtml = `
-                <div class="paper-header">
-                    <div class="flex-shrink-0">${logoHtml}</div>
-                    <div class="${state.header.alignment}" style="flex:1;">
-                        <div style="font-weight:700; font-size:18px; margin-bottom:6px;">${escapeHtml(state.header.schoolName)}</div>
-                        <div style="font-size:15px; margin-bottom:4px;">${escapeHtml(state.header.student)}</div>
-                        <div style="font-size:15px; margin-bottom:4px;">${escapeHtml(state.header.teacher)}</div>
-                        <div style="font-size:15px; margin-bottom:4px;">${escapeHtml(state.header.subject)}</div>
-                        <div style="font-size:15px;">${escapeHtml(state.header.info)}</div>
-                    </div>
-                </div>
-            `;
-            let bodyHtml = '';
-            // Add questions sequentially until clipped by the fixed #print-area height; we will add all but rely on overflow:hidden to clip.
-            state.questions.forEach((q, i) => {
-                const qNum = i + 1;
-                const qText = escapeHtml(q.text);
-                const imgHtml = q.image ? `<div style="text-align:center; margin:8px 0;"><img src="${q.image}" style="width:${q.imageSize}%; max-width:100%; display:inline-block;"></div>` : '';
-                if (isGabarito) {
-                    // For gabarito we show number and placeholder for the answer (if any)
-                    bodyHtml += `<div style="margin-bottom:10px;"><strong>${qNum}.</strong> ${qText}<div style="margin-top:6px;">Resposta: ____________________________</div></div>`;
-                } else {
-                    bodyHtml += `
-                        <div style="margin-bottom:8px;">
-                            <div style="font-size:14px; margin-bottom:6px;"><strong>${qNum}.</strong> ${qText}</div>
-                            ${imgHtml}
-                            ${Array.from({length: Math.max(0, q.lines)}).map(()=>`<div class="question-line"></div>`).join('')}
-                        </div>
-                    `;
-                }
-            });
-
-            target.innerHTML = `<div class="paper-content">${headerHtml}<div class="paper-body" style="margin-top:10px;">${bodyHtml}</div></div>`;
-        }
-
-        /* ---------- Export functions ---------- */
-        function exportPDF() {
-            renderPrintableContent(false);
-            const element = document.getElementById('print-area');
-
-            // ensure the element is visible to html2pdf
-            element.classList.remove('hidden');
-
-            const filename = `${(state.header.subject || 'Prova').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
-
-            html2pdf().set({
-                margin: 8,
-                filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).from(element).save().finally(() => {
-                // hide again
-                element.classList.add('hidden');
-            });
-        }
-
-        function exportGabaritoPDF() {
-            renderPrintableContent(true);
-            const element = document.getElementById('gabarito-area');
-            element.classList.remove('hidden');
-            const filename = `Gabarito_${(state.header.subject || 'Gabarito').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
-
-            html2pdf().set({
-                margin: 8,
-                filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).from(element).save().finally(() => {
-                element.classList.add('hidden');
-            });
-        }
-
-        /* ---------- Utilities ---------- */
-        function escapeHtml(text) {
-            if (!text && text !== '') return '';
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        /* ---------- Event bindings ---------- */
-        document.addEventListener('DOMContentLoaded', () => {
-            loadState();
+    /** Carrega o estado do localStorage. */
+    function loadState() {
+        const savedState = localStorage.getItem('examGeneratorState');
+        if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            Object.assign(state, parsedState);
             renderHeader();
             renderQuestions();
+            renderExamTitle();
+            document.documentElement.classList.toggle('dark', state.theme === 'dark');
+        } else {
+            addExampleData();
+        }
+    }
+    
+    /** Adiciona dados de exemplo para demonstração. */
+    function addExampleData() {
+        state.header.schoolName = 'Nome da Escola';
+        state.header.alignment = 'text-right';
+        state.header.teacher = 'Professor(a):';
+        state.header.subject = 'Componente curricular:';
+        state.examTitle = 'Título da Prova';
+        state.questions = [
+            {
+                id: crypto.randomUUID(),
+                text: '1. O que é o ponto de fusão?',
+                image: '',
+                imageSize: 100,
+                lines: 2
+            },
+            {
+                id: crypto.randomUUID(),
+                text: '2. Qual a principal característica do bioma Amazônia?',
+                image: '',
+                imageSize: 100,
+                lines: 3
+            }
+        ];
+        saveState();
+        renderHeader();
+        renderQuestions();
+        renderExamTitle();
+    }
 
-            // header inline edits
-            document.querySelectorAll('.header-field').forEach(el => {
-                el.addEventListener('input', (e) => {
-                    const key = e.target.dataset.key;
-                    if (key) {
-                        state.header[key] = e.target.textContent;
-                        saveState();
-                        renderHeader();
-                    }
-                });
-            });
+    // --- Funções de renderização ---
 
-            // logo upload / drag & drop
-            const logoContainer = document.getElementById('logo-container');
-            const logoInput = document.getElementById('logo-upload');
-            logoContainer.addEventListener('click', () => logoInput.click());
-            logoInput.addEventListener('change', (e) => {
-                const f = e.target.files[0];
-                if (f && f.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        state.header.logo = ev.target.result;
-                        saveState();
-                        renderHeader();
-                    };
-                    reader.readAsDataURL(f);
-                } else showMessage('Escolha uma imagem válida.', 'error');
-            });
-            logoContainer.addEventListener('dragover', (e) => { e.preventDefault(); logoContainer.classList.add('drag'); });
-            logoContainer.addEventListener('dragleave', (e) => { logoContainer.classList.remove('drag'); });
-            logoContainer.addEventListener('drop', (e) => {
-                e.preventDefault(); logoContainer.classList.remove('drag');
-                const f = e.dataTransfer.files && e.dataTransfer.files[0];
-                if (f && f.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        state.header.logo = ev.target.result;
-                        saveState();
-                        renderHeader();
-                    };
-                    reader.readAsDataURL(f);
-                } else showMessage('Solte um arquivo de imagem.', 'error');
-            });
+    /** Renderiza o cabeçalho da prova. */
+    function renderHeader() {
+        const logoPreviewEl = document.getElementById('logo-preview');
+        const logoPlaceholderEl = document.getElementById('logo-placeholder');
+        
+        // Renderiza o alinhamento
+        document.getElementById('header-info').className = `w-full md:w-3/4 flex-grow space-y-2 ${state.header.alignment}`;
+        document.querySelectorAll('#header-info button').forEach(btn => btn.classList.remove('bg-gray-300'));
+        const alignBtn = document.getElementById(`align-${state.header.alignment.replace('text-', '')}`);
+        if (alignBtn) {
+            alignBtn.classList.add('bg-gray-300');
+        }
 
-            // alignment buttons
-            document.getElementById('align-left').addEventListener('click', () => { state.header.alignment = 'text-left'; saveState(); renderHeader(); });
-            document.getElementById('align-center').addEventListener('click', () => { state.header.alignment = 'text-center'; saveState(); renderHeader(); });
-            document.getElementById('align-right').addEventListener('click', () => { state.header.alignment = 'text-right'; saveState(); renderHeader(); });
+        // Renderiza o texto
+        document.querySelector('[data-key="schoolName"]').textContent = state.header.schoolName;
+        document.querySelector('[data-key="teacher"]').textContent = state.header.teacher;
+        document.querySelector('[data-key="subject"]').textContent = state.header.subject;
+        
+        // Renderiza a logo
+        if (state.header.logo) {
+            logoPreviewEl.src = state.header.logo;
+            logoPreviewEl.style.display = 'block';
+            logoPlaceholderEl.style.display = 'none';
+        } else {
+            logoPreviewEl.style.display = 'none';
+            logoPlaceholderEl.style.display = 'block';
+        }
+    }
+    
+    /** Renderiza o título da prova. */
+    function renderExamTitle() {
+        const titleEl = document.getElementById('exam-title');
+        if (titleEl) {
+            titleEl.textContent = state.examTitle;
+        }
+    }
+    
+    /** Renderiza a lista de questões na UI. */
+    function renderQuestions() {
+        const questionListEl = document.getElementById('question-list');
+        questionListEl.innerHTML = '';
+        
+        state.questions.forEach((q, index) => {
+            const questionNumber = index + 1;
+            const element = document.createElement('div');
+            element.id = `question-${q.id}`;
+            element.className = 'bg-white rounded-lg shadow-md p-6 border border-gray-200';
+            element.draggable = true;
+            element.setAttribute('data-id', q.id);
+            element.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
+                    <span class="text-xl font-bold mr-4 text-blue-600">${questionNumber}.</span>
+                    <div class="flex-grow space-x-2 no-print">
+                        <button class="action-btn duplicate-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v4a1 1 0 001 1h4a1 1 0 001-1V7m-5 7a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4zm-4 7a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4zm-1-8a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4z" /></svg>
+                        </button>
+                        <button class="action-btn remove-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                        <button class="action-btn move-up-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                        </button>
+                        <button class="action-btn move-down-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="question-text text-base leading-relaxed mb-4" contenteditable="true" data-id="${q.id}">${q.text}</div>
+                
+                ${q.image ? `
+                    <div class="relative mb-4">
+                        <img src="${q.image}" class="max-w-full h-auto rounded-lg shadow-md" style="width: ${q.imageSize}%;" />
+                        <div class="flex items-center space-x-2 mt-2 no-print">
+                            <input type="range" class="image-size-slider flex-grow" data-id="${q.id}" min="10" max="100" value="${q.imageSize}" />
+                            <button class="remove-image-btn p-1 rounded-full bg-red-500 text-white" data-id="${q.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="no-print">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Número de linhas de resposta: ${q.lines}
+                    </label>
+                    <input type="range" class="response-lines-slider w-full" data-id="${q.id}" min="0" max="10" value="${q.lines}">
+                </div>
 
-            // process / add manual
-            document.getElementById('process-questions').addEventListener('click', processPastedText);
-            document.getElementById('add-manual').addEventListener('click', () => {
-                state.questions.push({ id: crypto.randomUUID(), text: 'Nova questão...', image:'', imageSize:100, lines:3, isAnswerKey:false });
-                saveState(); renderQuestions(); showMessage('Questão adicionada', 'success');
-            });
+                <!-- Lines for answer -->
+                ${Array(q.lines).fill().map(() => `<div class="question-line"></div>`).join('')}
+                
+                <!-- Drag and Drop Overlay for Images -->
+                <div class="image-drop-area cursor-pointer absolute inset-0 rounded-lg border-2 border-dashed border-transparent flex items-center justify-center pointer-events-none transition-colors duration-200" data-id="${q.id}">
+                    <span class="text-sm text-gray-500 opacity-0 transition-opacity duration-200">Solte a imagem aqui</span>
+                </div>
+            `;
+            questionListEl.appendChild(element);
+        });
+        setupQuestionListeners();
+    }
 
-            // export buttons
-            document.getElementById('export-pdf').addEventListener('click', exportPDF);
-            document.getElementById('export-gabarito').addEventListener('click', exportGabaritoPDF);
-
-            // clear exam
-            document.getElementById('clear-exam').addEventListener('click', () => {
-                if (confirm('Tem certeza que deseja limpar todo o conteúdo da prova?')) {
-                    localStorage.removeItem(stateKey);
-                    state.questions = [];
-                    state.header.logo = '';
+    /** Configura os event listeners para as questões. */
+    function setupQuestionListeners() {
+        document.querySelectorAll('.question-text').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const id = e.target.dataset.id;
+                const question = state.questions.find(q => q.id === id);
+                if (question) {
+                    question.text = e.target.textContent;
                     saveState();
-                    renderHeader(); renderQuestions();
-                    showMessage('Prova limpa', 'success');
                 }
             });
+        });
 
-            // theme toggle
-            document.getElementById('theme-toggle').addEventListener('click', () => {
-                document.documentElement.classList.toggle('dark');
-                state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-                saveState();
+        document.querySelectorAll('.response-lines-slider').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const id = e.target.dataset.id;
+                const question = state.questions.find(q => q.id === id);
+                if (question) {
+                    question.lines = parseInt(e.target.value, 10);
+                    e.target.previousElementSibling.textContent = `Número de linhas de resposta: ${question.lines}`;
+                    renderQuestions(); // Re-render to show lines
+                    saveState();
+                }
             });
         });
-    </script>
+
+        document.querySelectorAll('.image-size-slider').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const id = e.target.dataset.id;
+                const question = state.questions.find(q => q.id === id);
+                if (question) {
+                    question.imageSize = parseInt(e.target.value, 10);
+                    const img = document.querySelector(`#question-${id} img`);
+                    if (img) img.style.width = `${question.imageSize}%`;
+                    saveState();
+                }
+            });
+        });
+
+        document.querySelectorAll('.remove-image-btn').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                const question = state.questions.find(q => q.id === id);
+                if (question) {
+                    question.image = '';
+                    question.imageSize = 100;
+                    saveState();
+                    renderQuestions();
+                }
+            });
+        });
+        
+        document.querySelectorAll('.duplicate-btn').forEach(el => el.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            const index = state.questions.findIndex(q => q.id === id);
+            if (index !== -1) {
+                const original = state.questions[index];
+                const newQuestion = {...original, id: crypto.randomUUID()};
+                state.questions.splice(index + 1, 0, newQuestion);
+                saveState();
+                renderQuestions();
+                showMessage('Questão duplicada.', 'success');
+            }
+        }));
+        
+        document.querySelectorAll('.remove-btn').forEach(el => el.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            state.questions = state.questions.filter(q => q.id !== id);
+            saveState();
+            renderQuestions();
+            showMessage('Questão removida.', 'info');
+        }));
+
+        document.querySelectorAll('.move-up-btn').forEach(el => el.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            const index = state.questions.findIndex(q => q.id === id);
+            if (index > 0) {
+                const [q] = state.questions.splice(index, 1);
+                state.questions.splice(index - 1, 0, q);
+                saveState();
+                renderQuestions();
+            }
+        }));
+
+        document.querySelectorAll('.move-down-btn').forEach(el => el.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            const index = state.questions.findIndex(q => q.id === id);
+            if (index < state.questions.length - 1) {
+                const [q] = state.questions.splice(index, 1);
+                state.questions.splice(index + 1, 0, q);
+                saveState();
+                renderQuestions();
+            }
+        }));
+    }
+
+    // --- Funções principais do aplicativo ---
+
+    /** Processa o texto colado e gera questões. */
+    function processPastedText() {
+        const text = document.getElementById('question-input').value.trim();
+        if (!text) {
+            showMessage('Nenhum texto para analisar.', 'error');
+            return;
+        }
+
+        const questions = text.split(/^(?:\d+\.\s*|\d+\)\s*|\d+\-\s*)/gm).filter(q => q.trim().length > 0);
+        
+        state.questions = questions.map(qText => ({
+            id: crypto.randomUUID(),
+            text: qText.trim(),
+            image: '',
+            imageSize: 100,
+            lines: 3
+        }));
+
+        document.getElementById('question-input').value = '';
+        saveState();
+        renderQuestions();
+        showMessage(`Geradas ${state.questions.length} questões.`, 'success');
+    }
+    
+    /** Renderiza o conteúdo da prova para exportação. */
+    function renderPrintableContent() {
+        const targetEl = document.getElementById('print-area');
+        let htmlContent = '';
+
+        // Renderiza o cabeçalho para impressão
+        const logoHtml = state.header.logo ? `<div class="flex-shrink-0"><img src="${state.header.logo}" class="h-20 w-auto object-contain mr-4"></div>` : '';
+        const headerHtml = `
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-400">
+                ${logoHtml}
+                <div class="${state.header.alignment} text-lg flex-grow">
+                    <div class="font-bold">${state.header.schoolName}</div>
+                    <div class="font-bold">Aluno(a): <span style="border-bottom: 1px solid black; display: inline-block; width: 300px;"></span></div>
+                    <div class="font-bold">${state.header.teacher}</div>
+                    <div class="font-bold">${state.header.subject}</div>
+                    <div class="font-bold">Ano/Turma: <span style="border-bottom: 1px solid black; display: inline-block; width: 100px;"></span> Data: <span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span>/<span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span>/<span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span></div>
+                </div>
+            </div>
+        `;
+        htmlContent += headerHtml;
+        
+        // Renderiza o título da prova
+        const titleHtml = `<div class="text-center font-bold text-xl mb-4">${state.examTitle}</div>`;
+        htmlContent += titleHtml;
+
+        // Renderiza as questões
+        state.questions.forEach((q, index) => {
+            const questionNumber = index + 1;
+            const questionHtml = `
+                <div class="question-container mb-6">
+                    <p class="mb-2 text-base leading-relaxed">
+                        <span class="font-bold mr-2">${questionNumber}.</span>${q.text}
+                    </p>
+                    ${q.image ? `<div class="w-full text-center my-4"><img src="${q.image}" style="width: ${q.imageSize}%; max-width: 100%; display: inline-block;"></div>` : ''}
+                    
+                    ${Array(q.lines).fill().map(() => `<div class="question-line"></div>`).join('')}
+                </div>
+            `;
+            htmlContent += questionHtml;
+        });
+        
+        targetEl.innerHTML = htmlContent;
+    }
+
+    /** Exporta o conteúdo para PDF. */
+    function exportPDF() {
+        if (state.questions.length === 0) {
+            showMessage('Nenhuma questão para exportar.', 'error');
+            return;
+        }
+
+        renderPrintableContent();
+        const element = document.getElementById('print-area');
+        const filename = `${state.examTitle || 'Prova'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+        
+        html2pdf().from(element).set({
+            margin: 10,
+            filename: filename,
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).save();
+    }
+    
+    /** Limpa todo o estado do aplicativo. */
+    function clearExam() {
+        localStorage.removeItem('examGeneratorState');
+        state.header.logo = '';
+        state.questions = [];
+        addExampleData();
+        showMessage('Prova limpa com sucesso.', 'success');
+    }
+
+    // --- Event Listeners ---
+    document.addEventListener('DOMContentLoaded', loadState);
+
+    // Listeners do cabeçalho
+    document.querySelector('[data-key="schoolName"]').addEventListener('input', (e) => {
+        state.header.schoolName = e.target.textContent;
+        saveState();
+    });
+    document.querySelector('[data-key="teacher"]').addEventListener('input', (e) => {
+        state.header.teacher = e.target.textContent;
+        saveState();
+    });
+    document.querySelector('[data-key="subject"]').addEventListener('input', (e) => {
+        state.header.subject = e.target.textContent;
+        saveState();
+    });
+    
+    // Listener do título da prova
+    document.getElementById('exam-title').addEventListener('input', (e) => {
+        state.examTitle = e.target.textContent;
+        saveState();
+    });
+
+    document.getElementById('logo-container').addEventListener('click', () => {
+        document.getElementById('logo-upload').click();
+    });
+
+    document.getElementById('logo-upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                state.header.logo = event.target.result;
+                saveState();
+                renderHeader();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('logo-container').addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.add('border-blue-500');
+    });
+
+    document.getElementById('logo-container').addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove('border-blue-500');
+    });
+
+    document.getElementById('logo-container').addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = e.target.closest('.bg-white');
+        if (target) {
+            target.classList.remove('drag-highlight');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const id = target.dataset.id;
+                    const question = state.questions.find(q => q.id === id);
+                    if (question) {
+                        question.image = event.target.result;
+                        saveState();
+                        renderQuestions();
+                        showMessage('Imagem adicionada com sucesso!', 'success');
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showMessage('Por favor, solte um arquivo de imagem.', 'error');
+            }
+        }
+    });
+    
+    document.getElementById('align-left').addEventListener('click', () => {
+        state.header.alignment = 'text-left';
+        saveState();
+        renderHeader();
+    });
+
+    document.getElementById('align-center').addEventListener('click', () => {
+        state.header.alignment = 'text-center';
+        saveState();
+        renderHeader();
+    });
+
+    document.getElementById('align-right').addEventListener('click', () => {
+        state.header.alignment = 'text-right';
+        saveState();
+        renderHeader();
+    });
+
+    // Listeners das questões
+    document.getElementById('process-questions').addEventListener('click', processPastedText);
+    document.getElementById('add-manual').addEventListener('click', () => {
+        state.questions.push({
+            id: crypto.randomUUID(),
+            text: 'Nova questão...',
+            image: '',
+            imageSize: 100,
+            lines: 3
+        });
+        saveState();
+        renderQuestions();
+        showMessage('Nova questão adicionada.', 'success');
+    });
+
+    // Listeners de exportação e limpeza
+    document.getElementById('export-pdf').addEventListener('click', exportPDF);
+    document.getElementById('clear-exam').addEventListener('click', clearExam);
+    
+    // Listeners de arrastar e soltar para imagens dentro das questões
+    document.getElementById('question-list').addEventListener('dragover', (e) => {
+        const target = e.target.closest('.bg-white');
+        if (target && target.classList.contains('bg-white')) {
+            e.preventDefault();
+            e.stopPropagation();
+            target.classList.add('drag-highlight');
+        }
+    });
+    document.getElementById('question-list').addEventListener('dragleave', (e) => {
+        const target = e.target.closest('.bg-white');
+        if (target && target.classList.contains('bg-white')) {
+            e.preventDefault();
+            e.stopPropagation();
+            target.classList.remove('drag-highlight');
+        }
+    });
+
+    document.getElementById('question-list').addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = e.target.closest('.bg-white');
+        if (target) {
+            target.classList.remove('drag-highlight');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const id = target.dataset.id;
+                    const question = state.questions.find(q => q.id === id);
+                    if (question) {
+                        question.image = event.target.result;
+                        saveState();
+                        renderQuestions();
+                        showMessage('Imagem adicionada com sucesso!', 'success');
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showMessage('Por favor, solte um arquivo de imagem.', 'error');
+            }
+        }
+    });
+    
+    // Listener para o tema
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        saveState();
+    });
+
+</script>
+
 </body>
 </html>
