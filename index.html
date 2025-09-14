@@ -53,6 +53,7 @@
             border-bottom: 1px solid currentColor;
             margin-left: 0.5rem;
             min-width: 150px; /* Ajustado para a visualização na tela */
+            padding: 2px 6px;
         }
 
         .short-line {
@@ -84,6 +85,10 @@
 
         .print-preview {
             display: none;
+        }
+
+        .image-drop-area {
+            pointer-events: auto; /* aceitável para drop */
         }
 
         /* Estilos para impressão */
@@ -163,7 +168,7 @@
                 </div>
                 <div id="header-text-container" class="space-y-1">
                     <div class="header-field text-lg font-bold" data-key="schoolName" contenteditable="true">Nome da Escola</div>
-                    <div class="header-field text-lg font-bold" data-key="student">Aluno(a): <span class="fillable-line"></span></div>
+                    <div class="header-field text-lg font-bold">Aluno(a): <span class="fillable-line" contenteditable="true" data-key="student-name"></span></div>
                     <div class="header-field text-lg font-bold" data-key="teacher" contenteditable="true">Professor(a):</div>
                     <div class="header-field text-lg font-bold" data-key="subject" contenteditable="true">Componente curricular:</div>
                     <div class="header-field text-lg font-bold" data-key="info">Ano/Turma: <span class="fillable-line short-line"></span> Data: <span class="date-line"><span class="line"></span><span class="separator">/</span><span class="line"></span><span class="separator">/</span><span class="line"></span></span></div>
@@ -210,7 +215,7 @@
 </div>
 
 <!-- Hidden A4 Print Preview Area -->
-<div id="print-area" class="w-[210mm] min-h-[297mm] p-8 mx-auto bg-white shadow-xl print:block" style="display: none;">
+<div id="print-area" class="w-[210mm] min-h-[297mm] p-8 mx-auto bg-white shadow-xl">
     <!-- Content will be rendered here for PDF export -->
 </div>
 
@@ -223,6 +228,7 @@
             schoolName: 'Nome da Escola',
             teacher: 'Professor(a):',
             subject: 'Componente curricular:',
+            studentText: ''
         },
         examTitle: 'Título da Prova',
         questions: [],
@@ -230,14 +236,8 @@
     };
 
     let autoSaveTimeout = null;
-    
-    // --- Funções utilitárias ---
 
-    /**
-     * Exibe uma mensagem de notificação temporária.
-     * @param {string} message - A mensagem a ser exibida.
-     * @param {string} type - Tipo de mensagem ('success', 'error', 'info').
-     */
+    // --- Utilitários ---
     function showMessage(message, type = 'info') {
         const msgBox = document.getElementById('message-box');
         msgBox.textContent = message;
@@ -261,8 +261,7 @@
             msgBox.classList.add('opacity-0', 'pointer-events-none');
         }, 3000);
     }
-    
-    /** Salva o estado atual no localStorage com um debounce. */
+
     function saveState() {
         clearTimeout(autoSaveTimeout);
         autoSaveTimeout = setTimeout(() => {
@@ -271,7 +270,6 @@
         }, 500);
     }
 
-    /** Carrega o estado do localStorage. */
     function loadState() {
         const savedState = localStorage.getItem('examGeneratorState');
         if (savedState) {
@@ -285,8 +283,7 @@
             addExampleData();
         }
     }
-    
-    /** Adiciona dados de exemplo para demonstração. */
+
     function addExampleData() {
         state.header.schoolName = 'Nome da Escola';
         state.header.alignment = 'text-right';
@@ -315,27 +312,46 @@
         renderExamTitle();
     }
 
-    // --- Funções de renderização ---
+    // pequena função para escapar HTML antes de inserir onde necessário
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, function (m) {
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+        });
+    }
 
-    /** Renderiza o cabeçalho da prova. */
+    // --- Renderização ---
+
     function renderHeader() {
         const logoPreviewEl = document.getElementById('logo-preview');
         const logoPlaceholderEl = document.getElementById('logo-placeholder');
-        
-        // Renderiza o alinhamento
+
+        // Alinhamento
         document.getElementById('header-info').className = `w-full md:w-3/4 flex-grow space-y-2 ${state.header.alignment}`;
+
+        // Atualiza botões de alinhamento visualmente
         document.querySelectorAll('#header-info button').forEach(btn => btn.classList.remove('bg-gray-300'));
-        const alignBtn = document.getElementById(`align-${state.header.alignment.replace('text-', '')}`);
-        if (alignBtn) {
-            alignBtn.classList.add('bg-gray-300');
+        const alignBtnId = `align-${state.header.alignment.replace('text-', '')}`;
+        const alignBtn = document.getElementById(alignBtnId);
+        if (alignBtn) alignBtn.classList.add('bg-gray-300');
+
+        // Renderiza os campos sem apagar elementos internos (como span.fillable-line)
+        const schoolEl = document.querySelector('[data-key="schoolName"]');
+        if (schoolEl) schoolEl.textContent = state.header.schoolName || 'Nome da Escola';
+
+        const teacherEl = document.querySelector('[data-key="teacher"]');
+        if (teacherEl) teacherEl.textContent = state.header.teacher || 'Professor(a):';
+
+        const subjectEl = document.querySelector('[data-key="subject"]');
+        if (subjectEl) subjectEl.textContent = state.header.subject || 'Componente curricular:';
+
+        // Student (preencher o span editável)
+        const studentNameEl = document.querySelector('[data-key="student-name"]');
+        if (studentNameEl) {
+            studentNameEl.textContent = state.header.studentText || '';
         }
 
-        // Renderiza o texto
-        document.querySelector('[data-key="schoolName"]').textContent = state.header.schoolName;
-        document.querySelector('[data-key="teacher"]').textContent = state.header.teacher;
-        document.querySelector('[data-key="subject"]').textContent = state.header.subject;
-        
-        // Renderiza a logo
+        // Logo
         if (state.header.logo) {
             logoPreviewEl.src = state.header.logo;
             logoPreviewEl.style.display = 'block';
@@ -345,16 +361,14 @@
             logoPlaceholderEl.style.display = 'block';
         }
     }
-    
-    /** Renderiza o título da prova. */
+
     function renderExamTitle() {
         const titleEl = document.getElementById('exam-title');
         if (titleEl) {
             titleEl.textContent = state.examTitle;
         }
     }
-    
-    /** Renderiza a lista de questões na UI. */
+
     function renderQuestions() {
         const questionListEl = document.getElementById('question-list');
         questionListEl.innerHTML = '';
@@ -363,29 +377,29 @@
             const questionNumber = index + 1;
             const element = document.createElement('div');
             element.id = `question-${q.id}`;
-            element.className = 'bg-white rounded-lg shadow-md p-6 border border-gray-200';
+            element.className = 'bg-white rounded-lg shadow-md p-6 border border-gray-200 relative';
             element.draggable = true;
             element.setAttribute('data-id', q.id);
             element.innerHTML = `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
                     <span class="text-xl font-bold mr-4 text-blue-600">${questionNumber}.</span>
                     <div class="flex-grow space-x-2 no-print">
-                        <button class="action-btn duplicate-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                        <button class="action-btn duplicate-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}" title="Duplicar">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v4a1 1 0 001 1h4a1 1 0 001-1V7m-5 7a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4zm-4 7a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4zm-1-8a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4z" /></svg>
                         </button>
-                        <button class="action-btn remove-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                        <button class="action-btn remove-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}" title="Remover">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
-                        <button class="action-btn move-up-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                        <button class="action-btn move-up-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}" title="Mover para cima">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                         </button>
-                        <button class="action-btn move-down-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}">
+                        <button class="action-btn move-down-btn p-2 rounded-full hover:bg-gray-200" data-id="${q.id}" title="Mover para baixo">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                         </button>
                     </div>
                 </div>
                 
-                <div class="question-text text-base leading-relaxed mb-4" contenteditable="true" data-id="${q.id}">${q.text}</div>
+                <div class="question-text text-base leading-relaxed mb-4" contenteditable="true" data-id="${q.id}">${escapeHtml(q.text)}</div>
                 
                 ${q.image ? `
                     <div class="relative mb-4">
@@ -398,10 +412,10 @@
                         </div>
                     </div>
                 ` : ''}
-                
+
                 <div class="no-print">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Número de linhas de resposta: ${q.lines}
+                        Número de linhas de resposta: <span class="lines-label">${q.lines}</span>
                     </label>
                     <input type="range" class="response-lines-slider w-full" data-id="${q.id}" min="0" max="10" value="${q.lines}">
                 </div>
@@ -410,7 +424,7 @@
                 ${Array(q.lines).fill().map(() => `<div class="question-line"></div>`).join('')}
                 
                 <!-- Drag and Drop Overlay for Images -->
-                <div class="image-drop-area cursor-pointer absolute inset-0 rounded-lg border-2 border-dashed border-transparent flex items-center justify-center pointer-events-none transition-colors duration-200" data-id="${q.id}">
+                <div class="image-drop-area cursor-pointer absolute inset-0 rounded-lg border-2 border-dashed border-transparent flex items-center justify-center transition-colors duration-200" data-id="${q.id}">
                     <span class="text-sm text-gray-500 opacity-0 transition-opacity duration-200">Solte a imagem aqui</span>
                 </div>
             `;
@@ -419,59 +433,80 @@
         setupQuestionListeners();
     }
 
-    /** Configura os event listeners para as questões. */
+    // --- Listeners das questões e UI ---
     function setupQuestionListeners() {
         document.querySelectorAll('.question-text').forEach(el => {
-            el.addEventListener('input', (e) => {
-                const id = e.target.dataset.id;
-                const question = state.questions.find(q => q.id === id);
-                if (question) {
-                    question.text = e.target.textContent;
-                    saveState();
-                }
-            });
+            el.removeEventListener('input', questionTextHandler);
+            el.addEventListener('input', questionTextHandler);
         });
+
+        function questionTextHandler(e) {
+            const id = e.target.dataset.id;
+            const question = state.questions.find(q => q.id === id);
+            if (question) {
+                question.text = e.target.textContent;
+                saveState();
+            }
+        }
 
         document.querySelectorAll('.response-lines-slider').forEach(el => {
-            el.addEventListener('input', (e) => {
-                const id = e.target.dataset.id;
-                const question = state.questions.find(q => q.id === id);
-                if (question) {
-                    question.lines = parseInt(e.target.value, 10);
-                    e.target.previousElementSibling.textContent = `Número de linhas de resposta: ${question.lines}`;
-                    renderQuestions(); // Re-render to show lines
-                    saveState();
-                }
-            });
+            el.removeEventListener('input', responseLinesHandler);
+            el.addEventListener('input', responseLinesHandler);
         });
+
+        function responseLinesHandler(e) {
+            const id = e.target.dataset.id;
+            const question = state.questions.find(q => q.id === id);
+            if (question) {
+                question.lines = parseInt(e.target.value, 10);
+                const label = e.target.previousElementSibling;
+                if (label) {
+                    const spanLabel = label.querySelector('.lines-label');
+                    if (spanLabel) spanLabel.textContent = question.lines;
+                }
+                renderQuestions(); // Re-render to show lines
+                saveState();
+            }
+        }
 
         document.querySelectorAll('.image-size-slider').forEach(el => {
-            el.addEventListener('input', (e) => {
-                const id = e.target.dataset.id;
-                const question = state.questions.find(q => q.id === id);
-                if (question) {
-                    question.imageSize = parseInt(e.target.value, 10);
-                    const img = document.querySelector(`#question-${id} img`);
-                    if (img) img.style.width = `${question.imageSize}%`;
-                    saveState();
-                }
-            });
+            el.removeEventListener('input', imageSizeHandler);
+            el.addEventListener('input', imageSizeHandler);
         });
 
+        function imageSizeHandler(e) {
+            const id = e.target.dataset.id;
+            const question = state.questions.find(q => q.id === id);
+            if (question) {
+                question.imageSize = parseInt(e.target.value, 10);
+                const img = document.querySelector(`#question-${id} img`);
+                if (img) img.style.width = `${question.imageSize}%`;
+                saveState();
+            }
+        }
+
         document.querySelectorAll('.remove-image-btn').forEach(el => {
-            el.addEventListener('click', (e) => {
-                const id = e.currentTarget.dataset.id;
-                const question = state.questions.find(q => q.id === id);
-                if (question) {
-                    question.image = '';
-                    question.imageSize = 100;
-                    saveState();
-                    renderQuestions();
-                }
-            });
+            el.removeEventListener('click', removeImageHandler);
+            el.addEventListener('click', removeImageHandler);
         });
+
+        function removeImageHandler(e) {
+            const id = e.currentTarget.dataset.id;
+            const question = state.questions.find(q => q.id === id);
+            if (question) {
+                question.image = '';
+                question.imageSize = 100;
+                saveState();
+                renderQuestions();
+            }
+        }
         
-        document.querySelectorAll('.duplicate-btn').forEach(el => el.addEventListener('click', (e) => {
+        document.querySelectorAll('.duplicate-btn').forEach(el => {
+            el.removeEventListener('click', duplicateHandler);
+            el.addEventListener('click', duplicateHandler);
+        });
+
+        function duplicateHandler(e) {
             const id = e.currentTarget.dataset.id;
             const index = state.questions.findIndex(q => q.id === id);
             if (index !== -1) {
@@ -482,17 +517,27 @@
                 renderQuestions();
                 showMessage('Questão duplicada.', 'success');
             }
-        }));
+        }
         
-        document.querySelectorAll('.remove-btn').forEach(el => el.addEventListener('click', (e) => {
+        document.querySelectorAll('.remove-btn').forEach(el => {
+            el.removeEventListener('click', removeHandler);
+            el.addEventListener('click', removeHandler);
+        });
+
+        function removeHandler(e) {
             const id = e.currentTarget.dataset.id;
             state.questions = state.questions.filter(q => q.id !== id);
             saveState();
             renderQuestions();
             showMessage('Questão removida.', 'info');
-        }));
+        }
 
-        document.querySelectorAll('.move-up-btn').forEach(el => el.addEventListener('click', (e) => {
+        document.querySelectorAll('.move-up-btn').forEach(el => {
+            el.removeEventListener('click', moveUpHandler);
+            el.addEventListener('click', moveUpHandler);
+        });
+
+        function moveUpHandler(e) {
             const id = e.currentTarget.dataset.id;
             const index = state.questions.findIndex(q => q.id === id);
             if (index > 0) {
@@ -501,9 +546,14 @@
                 saveState();
                 renderQuestions();
             }
-        }));
+        }
 
-        document.querySelectorAll('.move-down-btn').forEach(el => el.addEventListener('click', (e) => {
+        document.querySelectorAll('.move-down-btn').forEach(el => {
+            el.removeEventListener('click', moveDownHandler);
+            el.addEventListener('click', moveDownHandler);
+        });
+
+        function moveDownHandler(e) {
             const id = e.currentTarget.dataset.id;
             const index = state.questions.findIndex(q => q.id === id);
             if (index < state.questions.length - 1) {
@@ -512,12 +562,10 @@
                 saveState();
                 renderQuestions();
             }
-        }));
+        });
     }
 
-    // --- Funções principais do aplicativo ---
-
-    /** Processa o texto colado e gera questões. */
+    // --- Processamento de texto colado ---
     function processPastedText() {
         const text = document.getElementById('question-input').value.trim();
         if (!text) {
@@ -525,7 +573,11 @@
             return;
         }
 
-        const questions = text.split(/^(?:\d+\.\s*|\d+\)\s*|\d+\-\s*)/gm).filter(q => q.trim().length > 0);
+        // Tenta separar por numeração; se falhar, separa por blocos (duas quebras de linha)
+        let questions = text.split(/^(?:\d+\.\s*|\d+\)\s*|\d+\-\s*)/gm).filter(q => q.trim().length > 0);
+        if (questions.length <= 1) {
+            questions = text.split(/\n{2,}/).map(s => s.trim()).filter(s => s.length > 0);
+        }
         
         state.questions = questions.map(qText => ({
             id: crypto.randomUUID(),
@@ -540,52 +592,53 @@
         renderQuestions();
         showMessage(`Geradas ${state.questions.length} questões.`, 'success');
     }
-    
-    /** Renderiza o conteúdo da prova para exportação. */
+
+    // --- Render para impressão e exportação PDF ---
     function renderPrintableContent() {
         const targetEl = document.getElementById('print-area');
-        let htmlContent = '';
+        
+        // Ler diretamente dos elementos editáveis para garantir que o PDF contenha o que está na tela
+        const schoolName = document.querySelector('[data-key="schoolName"]').textContent.trim();
+        const teacher = document.querySelector('[data-key="teacher"]').textContent.trim();
+        const subject = document.querySelector('[data-key="subject"]').textContent.trim();
+        const student = state.header.studentText || document.querySelector('[data-key="student-name"]').textContent.trim();
+        const examTitle = document.getElementById('exam-title').textContent.trim();
 
-        // Renderiza o cabeçalho para impressão
         const logoHtml = state.header.logo ? `<div class="flex-shrink-0"><img src="${state.header.logo}" class="h-20 w-auto object-contain mr-4"></div>` : '';
+
+        // Cabeçalho completo
         const headerHtml = `
-            <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-400">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid #999;">
                 ${logoHtml}
-                <div class="${state.header.alignment} text-lg flex-grow">
-                    <div class="font-bold">${state.header.schoolName}</div>
-                    <div class="font-bold">Aluno(a): <span style="border-bottom: 1px solid black; display: inline-block; width: 550px;"></span></div>
-                    <div class="font-bold">${state.header.teacher}</div>
-                    <div class="font-bold">${state.header.subject}</div>
-                    <div class="font-bold">Ano/Turma: <span style="border-bottom: 1px solid black; display: inline-block; width: 100px;"></span> Data: <span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span>/<span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span>/<span style="border-bottom: 1px solid black; display: inline-block; width: 35px;"></span></div>
+                <div style="text-align:${state.header.alignment === 'text-right' ? 'right' : state.header.alignment === 'text-left' ? 'left' : 'center'};flex-grow:1;">
+                    <div style="font-weight:700;font-size:16px;margin-bottom:4px;">${escapeHtml(schoolName)}</div>
+                    <div style="font-weight:700;margin-bottom:4px;">Aluno(a): <span style="border-bottom:1px solid #000;display:inline-block;width:350px;padding:2px 6px;">${escapeHtml(student)}</span></div>
+                    <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(teacher)}</div>
+                    <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(subject)}</div>
+                    <div style="font-weight:700;">Ano/Turma: <span style="border-bottom:1px solid #000;display:inline-block;width:100px;"></span> Data: <span style="border-bottom:1px solid #000;display:inline-block;width:35px;"></span>/<span style="border-bottom:1px solid #000;display:inline-block;width:35px;"></span>/<span style="border-bottom:1px solid #000;display:inline-block;width:35px;"></span></div>
                 </div>
             </div>
         `;
-        htmlContent += headerHtml;
-        
-        // Renderiza o título da prova
-        const titleHtml = `<div class="text-center font-bold text-xl mb-4">${state.examTitle}</div>`;
-        htmlContent += titleHtml;
 
-        // Renderiza as questões
+        const titleHtml = `<div style="text-align:center;font-weight:700;font-size:18px;margin-bottom:12px;">${escapeHtml(examTitle)}</div>`;
+        
+        let questionsHtml = '';
         state.questions.forEach((q, index) => {
             const questionNumber = index + 1;
-            const questionHtml = `
-                <div class="question-container mb-6">
-                    <p class="mb-2 text-base leading-relaxed">
-                        <span class="font-bold mr-2">${questionNumber}.</span>${q.text}
+            questionsHtml += `
+                <div style="margin-bottom:18px;">
+                    <p style="margin:0 0 8px 0;font-size:14px;line-height:1.4;">
+                        <strong style="margin-right:8px;">${questionNumber}.</strong>${escapeHtml(q.text)}
                     </p>
-                    ${q.image ? `<div class="w-full text-center my-4"><img src="${q.image}" style="width: ${q.imageSize}%; max-width: 100%; display: inline-block;"></div>` : ''}
-                    
-                    ${Array(q.lines).fill().map(() => `<div class="question-line"></div>`).join('')}
+                    ${q.image ? `<div style="text-align:center;margin:10px 0;"><img src="${q.image}" style="width:${q.imageSize}%;max-width:100%;display:inline-block;"></div>` : ''}
+                    ${Array(q.lines).fill().map(() => `<div style="border-bottom:2px solid #000;min-height:18px;margin-top:6px;margin-bottom:6px;"></div>`).join('')}
                 </div>
             `;
-            htmlContent += questionHtml;
         });
         
-        targetEl.innerHTML = htmlContent;
+        targetEl.innerHTML = headerHtml + titleHtml + questionsHtml;
     }
 
-    /** Exporta o conteúdo para PDF. */
     function exportPDF() {
         if (state.questions.length === 0) {
             showMessage('Nenhuma questão para exportar.', 'error');
@@ -596,24 +649,14 @@
         const element = document.getElementById('print-area');
         const filename = `${state.examTitle || 'Prova'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
         
-        // Mostra temporariamente a área de impressão para captura
-        element.style.display = 'block';
-        
-        const options = {
+        html2pdf().from(element).set({
             margin: 10,
             filename: filename,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: true },
+            html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        
-        html2pdf().set(options).from(element).save().then(() => {
-            // Oculta novamente a área de impressão após a exportação
-            element.style.display = 'none';
-        });
+        }).save();
     }
-    
-    /** Limpa todo o estado do aplicativo. */
+
     function clearExam() {
         localStorage.removeItem('examGeneratorState');
         state.header.logo = '';
@@ -622,20 +665,26 @@
         showMessage('Prova limpa com sucesso.', 'success');
     }
 
-    // --- Event Listeners ---
+    // --- Event Listeners iniciais ---
     document.addEventListener('DOMContentLoaded', loadState);
 
-    // Listeners do cabeçalho
+    // Listeners do cabeçalho (inputs editáveis)
     document.querySelector('[data-key="schoolName"]').addEventListener('input', (e) => {
-        state.header.schoolName = e.target.textContent;
+        state.header.schoolName = e.target.textContent.trim();
         saveState();
     });
     document.querySelector('[data-key="teacher"]').addEventListener('input', (e) => {
-        state.header.teacher = e.target.textContent;
+        state.header.teacher = e.target.textContent.trim();
         saveState();
     });
     document.querySelector('[data-key="subject"]').addEventListener('input', (e) => {
-        state.header.subject = e.target.textContent;
+        state.header.subject = e.target.textContent.trim();
+        saveState();
+    });
+
+    // Student name (editable span)
+    document.querySelector('[data-key="student-name"]').addEventListener('input', (e) => {
+        state.header.studentText = e.target.textContent.trim();
         saveState();
     });
     
@@ -645,6 +694,7 @@
         saveState();
     });
 
+    // Logo handlers: clique para abrir e upload
     document.getElementById('logo-container').addEventListener('click', () => {
         document.getElementById('logo-upload').click();
     });
@@ -662,6 +712,7 @@
         }
     });
 
+    // Drag over / leave visuals para logo
     document.getElementById('logo-container').addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -674,32 +725,29 @@
         e.currentTarget.classList.remove('border-blue-500');
     });
 
+    // Drop no logo - correção: usa e.currentTarget e grava em state.header.logo
     document.getElementById('logo-container').addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const target = e.target.closest('.bg-white');
-        if (target) {
-            target.classList.remove('drag-highlight');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const id = target.dataset.id;
-                    const question = state.questions.find(q => q.id === id);
-                    if (question) {
-                        question.image = event.target.result;
-                        saveState();
-                        renderQuestions();
-                        showMessage('Imagem adicionada com sucesso!', 'success');
-                    }
-                };
-                reader.readAsDataURL(file);
-            } else {
-                showMessage('Por favor, solte um arquivo de imagem.', 'error');
-            }
+        const container = e.currentTarget;
+        container.classList.remove('border-blue-500');
+
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                state.header.logo = event.target.result;
+                saveState();
+                renderHeader();
+                showMessage('Logo adicionada com sucesso!', 'success');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showMessage('Por favor, solte um arquivo de imagem.', 'error');
         }
     });
-    
+
+    // Alinhamento
     document.getElementById('align-left').addEventListener('click', () => {
         state.header.alignment = 'text-left';
         saveState();
@@ -718,7 +766,7 @@
         renderHeader();
     });
 
-    // Listeners das questões
+    // Botões principais
     document.getElementById('process-questions').addEventListener('click', processPastedText);
     document.getElementById('add-manual').addEventListener('click', () => {
         state.questions.push({
@@ -733,55 +781,57 @@
         showMessage('Nova questão adicionada.', 'success');
     });
 
-    // Listeners de exportação e limpeza
     document.getElementById('export-pdf').addEventListener('click', exportPDF);
     document.getElementById('clear-exam').addEventListener('click', clearExam);
-    
-    // Listeners de arrastar e soltar para imagens dentro das questões
+
+    // Drag & Drop para imagens dentro das questões - corrigido: identifica [data-id] da questão
     document.getElementById('question-list').addEventListener('dragover', (e) => {
-        const target = e.target.closest('.bg-white');
-        if (target && target.classList.contains('bg-white')) {
+        const questionEl = e.target.closest('[data-id]');
+        if (questionEl) {
             e.preventDefault();
             e.stopPropagation();
-            target.classList.add('drag-highlight');
+            questionEl.classList.add('drag-highlight');
         }
     });
     document.getElementById('question-list').addEventListener('dragleave', (e) => {
-        const target = e.target.closest('.bg-white');
-        if (target && target.classList.contains('bg-white')) {
+        const questionEl = e.target.closest('[data-id]');
+        if (questionEl) {
             e.preventDefault();
             e.stopPropagation();
-            target.classList.remove('drag-highlight');
+            questionEl.classList.remove('drag-highlight');
         }
     });
 
     document.getElementById('question-list').addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const target = e.target.closest('.bg-white');
-        if (target) {
-            target.classList.remove('drag-highlight');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const id = target.dataset.id;
-                    const question = state.questions.find(q => q.id === id);
-                    if (question) {
-                        question.image = event.target.result;
-                        saveState();
-                        renderQuestions();
-                        showMessage('Imagem adicionada com sucesso!', 'success');
-                    }
-                };
-                reader.readAsDataURL(file);
-            } else {
-                showMessage('Por favor, solte um arquivo de imagem.', 'error');
-            }
+        const questionEl = e.target.closest('[data-id]');
+        if (!questionEl) {
+            showMessage('Não foi possível identificar a questão alvo.', 'error');
+            return;
+        }
+        questionEl.classList.remove('drag-highlight');
+        const id = questionEl.getAttribute('data-id');
+
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const question = state.questions.find(q => q.id === id);
+                if (question) {
+                    question.image = event.target.result;
+                    saveState();
+                    renderQuestions();
+                    showMessage('Imagem adicionada com sucesso!', 'success');
+                }
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showMessage('Por favor, solte um arquivo de imagem.', 'error');
         }
     });
-    
-    // Listener para o tema
+
+    // Tema
     document.getElementById('theme-toggle').addEventListener('click', () => {
         document.documentElement.classList.toggle('dark');
         state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
