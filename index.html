@@ -16,12 +16,18 @@
     .card { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:1.25rem; box-shadow:0 6px 18px rgba(16,24,40,0.04); }
     [contenteditable]:focus { outline:none; box-shadow:0 0 0 3px rgba(59,130,246,0.12); border-radius:4px; }
     .fillable-line { display:inline-block; border-bottom:1px solid currentColor; margin-left:.5rem; min-width:150px; }
-    .short-line { min-width:50px; }
+    .short-line { min-width:50px; display:inline-block; border-bottom:1px solid currentColor; width:80px; vertical-align:middle; }
     .question-line { border-bottom:2px solid #cbd5e1; min-height:1.2rem; margin:0.75rem 0; }
     .image-drop-area { border:2px dashed #d1d5db; background-color: rgba(0,0,0,0.02); padding:8px; border-radius:6px; text-align:center; cursor:pointer; }
     .image-drop-area.drag-over { border-color:#3b82f6; background-color: rgba(59,130,246,0.06); }
     #print-area { display:none; width:210mm; min-height:297mm; background:#fff; padding:24mm; box-sizing:border-box; }
-    .no-print { display:none; }
+    @media print {
+      body { background:#fff; color:#000; }
+      #app { display:none !important; }
+      #print-area { display:block !important; width:210mm; min-height:297mm; padding:20mm; box-sizing:border-box; }
+    }
+    .btn { display:inline-block; padding:8px 12px; border-radius:6px; cursor:pointer; }
+    .no-print { }
   </style>
 </head>
 <body>
@@ -53,7 +59,7 @@
   <!-- Adicionar/Analisar Questões -->
   <div class="card mb-6">
     <h2 class="text-lg font-bold mb-2">Questões</h2>
-    <textarea id="question-input" rows="4" class="w-full p-3 rounded border mb-4" placeholder="Cole ou escreva suas questões aqui..."></textarea>
+    <textarea id="question-input" rows="6" class="w-full p-3 rounded border mb-4" placeholder="Cole ou escreva suas questões aqui... (cada linha vira uma questão)"></textarea>
     <div class="flex gap-2">
       <button id="process-questions" class="flex-1 bg-blue-600 text-white py-2 rounded">Analisar e Gerar</button>
       <button id="add-manual" class="bg-gray-200 py-2 px-4 rounded">Adicionar Questão Manual</button>
@@ -74,145 +80,282 @@
 <div id="print-area" aria-hidden="true"></div>
 
 <script>
-const state = {
-  header: { logo:'', schoolName:'Nome da Escola', student:'Aluno(a):', teacher:'Professor(a):', subject:'Componente curricular:', info:'Ano/Turma: Data:' },
-  examTitle: 'Título da Prova',
-  questions: []
-};
+  const state = {
+    header: {
+      logo: '',
+      schoolName: 'Nome da Escola',
+      student: 'Aluno(a):',
+      teacher: 'Professor(a):',
+      subject: 'Componente curricular:',
+      info: 'Ano/Turma: Data:'
+    },
+    examTitle: 'Título da Prova',
+    questions: []
+  };
 
-// Funções auxiliares
-function showMessage(msg){ alert(msg); }
-function saveState(){ localStorage.setItem('examState', JSON.stringify(state)); }
-function loadState(){
-  const s = localStorage.getItem('examState');
-  if(s){ Object.assign(state, JSON.parse(s)); renderAll(); }
-}
+  // simples notificação (substitui alert para ações)
+  function showMessage(msg) {
+    // fallback simples: usar alert para garantir visibilidade
+    // se quiser, mudar para toast visual.
+    alert(msg);
+  }
 
-// Renderização completa
-function renderAll(){
-  renderHeader();
-  renderExamTitle();
-  renderQuestions();
-}
+  function saveState() {
+    try { localStorage.setItem('examState', JSON.stringify(state)); } catch(e) { console.warn('Não foi possível salvar estado', e); }
+  }
 
-// Cabeçalho
-function renderHeader(){
-  const logoPreview = document.getElementById('logo-preview');
-  const logoPlaceholder = document.getElementById('logo-placeholder');
-  if(state.header.logo){ logoPreview.src=state.header.logo; logoPreview.style.display='block'; logoPlaceholder.style.display='none'; } 
-  else { logoPreview.style.display='none'; logoPlaceholder.style.display='block'; }
-  document.querySelector('[data-key="schoolName"]').textContent=state.header.schoolName;
-  document.querySelector('[data-key="student"]').textContent=state.header.student;
-  document.querySelector('[data-key="teacher"]').textContent=state.header.teacher;
-  document.querySelector('[data-key="subject"]').textContent=state.header.subject;
-  document.querySelector('[data-key="info"]').textContent=state.header.info;
-}
+  function loadState() {
+    try {
+      const s = localStorage.getItem('examState');
+      if (s) {
+        const parsed = JSON.parse(s);
+        // merge
+        Object.assign(state.header, parsed.header || {});
+        state.examTitle = parsed.examTitle || state.examTitle;
+        state.questions = parsed.questions || state.questions;
+        renderAll();
+      } else {
+        // exemplo inicial
+        state.questions = [
+          { id: crypto.randomUUID(), text: '1. O que é o ponto de fusão?', lines:3, image:'', imageSize:100 },
+          { id: crypto.randomUUID(), text: '2. Qual a principal característica do bioma Amazônia?', lines:3, image:'', imageSize:100 }
+        ];
+        renderAll();
+      }
+    } catch(e) {
+      console.error('Erro ao carregar estado', e);
+      renderAll();
+    }
+  }
 
-// Título
-function renderExamTitle(){ document.getElementById('exam-title').textContent=state.examTitle; }
+  // render geral
+  function renderAll() {
+    renderHeader();
+    renderExamTitle();
+    renderQuestions();
+  }
 
-// Questões
-function renderQuestions(){
-  const list = document.getElementById('question-list');
-  list.innerHTML='';
-  state.questions.forEach((q,i)=>{
-    const el=document.createElement('div');
-    el.className='card';
-    el.innerHTML=`
-      <div class="flex justify-between items-start">
-        <div><span class="font-bold text-blue-600">${i+1}.</span></div>
-        <div style="flex:1; margin-left:1rem;">
-          <div class="question-text" contenteditable="true" data-id="${q.id}" style="min-height:40px;">${q.text}</div>
-          ${q.image ? `<div style="text-align:center; margin-top:8px;"><img src="${q.image}" style="width:${q.imageSize}%; max-width:100%;"></div>` : ''}
-          <div class="mt-3">
-            ${Array(q.lines).fill('<div class="question-line"></div>').join('')}
+  function renderHeader() {
+    const logoPreview = document.getElementById('logo-preview');
+    const logoPlaceholder = document.getElementById('logo-placeholder');
+    if (state.header.logo) {
+      logoPreview.src = state.header.logo;
+      logoPreview.style.display = 'block';
+      logoPlaceholder.style.display = 'none';
+    } else {
+      logoPreview.style.display = 'none';
+      logoPlaceholder.style.display = 'block';
+    }
+    document.querySelector('[data-key="schoolName"]').textContent = state.header.schoolName;
+    document.querySelector('[data-key="student"]').textContent = state.header.student;
+    document.querySelector('[data-key="teacher"]').textContent = state.header.teacher;
+    document.querySelector('[data-key="subject"]').textContent = state.header.subject;
+    document.querySelector('[data-key="info"]').textContent = state.header.info;
+  }
+
+  function renderExamTitle() {
+    document.getElementById('exam-title').textContent = state.examTitle;
+  }
+
+  function renderQuestions() {
+    const list = document.getElementById('question-list');
+    list.innerHTML = '';
+    state.questions.forEach((q, idx) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card';
+      wrapper.innerHTML = `
+        <div style="display:flex; gap:12px;">
+          <div style="flex: 0 0 32px; font-weight:700; color:#2563eb;">${idx+1}.</div>
+          <div style="flex:1;">
+            <div class="question-text" contenteditable="true" data-id="${q.id}" style="min-height:40px;">${escapeHtml(q.text)}</div>
+            ${q.image ? `<div style="text-align:center; margin-top:8px;"><img src="${q.image}" style="width:${q.imageSize}%; max-width:100%; border-radius:6px;"></div>` : ''}
+            <div style="margin-top:8px;">
+              ${Array(q.lines).fill('<div class="question-line"></div>').join('')}
+            </div>
           </div>
+        </div>
+      `;
+      list.appendChild(wrapper);
+    });
+    setupQuestionListeners();
+  }
+
+  function setupQuestionListeners() {
+    document.querySelectorAll('.question-text').forEach(el => {
+      el.oninput = (e) => {
+        const id = e.target.dataset.id;
+        const q = state.questions.find(x => x.id === id);
+        if (q) {
+          q.text = e.target.textContent;
+          saveState();
+        }
+      };
+    });
+  }
+
+  // adicionar manual
+  document.getElementById('add-manual').addEventListener('click', () => {
+    state.questions.push({ id: crypto.randomUUID(), text: 'Nova questão...', lines: 3, image:'', imageSize:100 });
+    saveState();
+    renderQuestions();
+  });
+
+  // processar texto (cada linha vira questão)
+  document.getElementById('process-questions').addEventListener('click', () => {
+    const raw = document.getElementById('question-input').value.trim();
+    if (!raw) { showMessage('Nenhum texto para analisar'); return; }
+    // dividir por linhas vazias ou por quebras
+    const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    state.questions = lines.map(l => ({ id: crypto.randomUUID(), text: l, lines: 3, image:'', imageSize:100 }));
+    document.getElementById('question-input').value = '';
+    saveState();
+    renderQuestions();
+    showMessage(`Geradas ${state.questions.length} questões.`);
+  });
+
+  // logo upload e drag
+  document.getElementById('logo-container').addEventListener('click', () => document.getElementById('logo-upload').click());
+  document.getElementById('logo-upload').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (f && f.type.startsWith('image/')) {
+      const r = new FileReader();
+      r.onload = ev => { state.header.logo = ev.target.result; saveState(); renderHeader(); };
+      r.readAsDataURL(f);
+    }
+  });
+
+  const logoCont = document.getElementById('logo-container');
+  logoCont.addEventListener('dragover', e => { e.preventDefault(); logoCont.style.borderColor = '#3b82f6'; });
+  logoCont.addEventListener('dragleave', e => { logoCont.style.borderColor = ''; });
+  logoCont.addEventListener('drop', e => {
+    e.preventDefault();
+    logoCont.style.borderColor = '';
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const r = new FileReader();
+      r.onload = ev => { state.header.logo = ev.target.result; saveState(); renderHeader(); showMessage('Logo adicionada'); };
+      r.readAsDataURL(file);
+    } else showMessage('Solte uma imagem válida');
+  });
+
+  // renderiza conteúdo imprimível no #print-area
+  function escapeHtml(str) {
+    if (str === undefined || str === null) return '';
+    return String(str)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;')
+      .replaceAll('\n','<br>');
+  }
+
+  function renderPrintableContent() {
+    const target = document.getElementById('print-area');
+    // header values (pegar do estado ou do contenteditable)
+    const schoolName = document.querySelector('[data-key="schoolName"]').textContent.trim() || state.header.schoolName;
+    const student = document.querySelector('[data-key="student"]').textContent.trim() || state.header.student;
+    const teacher = document.querySelector('[data-key="teacher"]').textContent.trim() || state.header.teacher;
+    const subject = document.querySelector('[data-key="subject"]').textContent.trim() || state.header.subject;
+    const info = document.querySelector('[data-key="info"]').textContent.trim() || state.header.info;
+    const examTitle = document.getElementById('exam-title').textContent.trim() || state.examTitle;
+
+    const logoHtml = state.header.logo ? `<div style="margin-bottom:8px;"><img src="${state.header.logo}" style="height:60px; object-fit:contain;"></div>` : '';
+
+    const headerHtml = `
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px;">
+        <div>${logoHtml}</div>
+        <div style="text-align:right; flex:1; padding-left:12px;">
+          <div style="font-weight:700; font-size:16px;">${escapeHtml(schoolName)}</div>
+          <div style="font-weight:600;">${escapeHtml(student)}</div>
+          <div style="font-weight:600;">${escapeHtml(teacher)}</div>
+          <div style="font-weight:600;">${escapeHtml(subject)}</div>
+          <div style="font-weight:600;">${escapeHtml(info)}</div>
         </div>
       </div>
     `;
-    list.appendChild(el);
-  });
-  setupQuestionListeners();
-}
 
-// Listeners das questões
-function setupQuestionListeners(){
-  document.querySelectorAll('.question-text').forEach(el=>{
-    el.oninput = e=>{
-      const id=e.target.dataset.id;
-      const q=state.questions.find(x=>x.id===id);
-      if(q){ q.text=e.target.textContent; saveState(); }
-    };
-  });
-}
+    const titleHtml = `<div style="text-align:center; font-weight:700; font-size:18px; margin: 12px 0 18px 0;">${escapeHtml(examTitle)}</div>`;
 
-// Adicionar questão manual
-document.getElementById('add-manual').addEventListener('click',()=>{
-  state.questions.push({id:crypto.randomUUID(), text:'Nova questão...', lines:3, image:'', imageSize:100});
-  saveState(); renderQuestions();
-});
+    let questionsHtml = '';
+    state.questions.forEach((q, i) => {
+      const num = i + 1;
+      // garantir que o texto da questão esteja sem tags indesejadas
+      const qText = escapeHtml(q.text);
+      const imageHtml = q.image ? `<div style="text-align:center; margin:8px 0;"><img src="${q.image}" style="width:${q.imageSize}%; max-width:100%;"></div>` : '';
+      const linesHtml = Array(q.lines).fill('<div style="border-bottom:2px solid #000; height:18px; margin-top:10px;"></div>').join('');
+      questionsHtml += `<div style="margin-bottom:14px; font-size:14px;"><div style="margin-bottom:6px;"><strong>${num}.</strong> ${qText}</div>${imageHtml}${linesHtml}</div>`;
+    });
 
-// Processar texto colado
-document.getElementById('process-questions').addEventListener('click',()=>{
-  const text=document.getElementById('question-input').value.trim();
-  if(!text){ showMessage('Nenhum texto para analisar'); return; }
-  const parts=text.split(/\r?\n/).filter(s=>s);
-  state.questions=parts.map(qText=>({id:crypto.randomUUID(), text:qText, lines:3, image:'', imageSize:100}));
-  document.getElementById('question-input').value='';
-  saveState(); renderQuestions();
-});
-
-// Logo
-document.getElementById('logo-container').addEventListener('click',()=>document.getElementById('logo-upload').click());
-document.getElementById('logo-upload').addEventListener('change',e=>{
-  const f=e.target.files[0];
-  if(f && f.type.startsWith('image/')){
-    const r=new FileReader();
-    r.onload=ev=>{ state.header.logo=ev.target.result; saveState(); renderHeader(); }
-    r.readAsDataURL(f);
+    // final
+    target.innerHTML = `<div>${headerHtml}${titleHtml}${questionsHtml}</div>`;
   }
-});
 
-// Exportar PDF
-function renderPrintableContent(){
-  const target=document.getElementById('print-area');
-  target.innerHTML='';
-  // Header
-  const logoHtml=state.header.logo?`<img src="${state.header.logo}" style="height:60px; object-fit:contain; margin-bottom:8px;">`:'';
-  const headerHtml=`
-    <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-      <div>${logoHtml}</div>
-      <div style="text-align:right; flex:1;">
-        <div style="font-weight:bold;">${state.header.schoolName}</div>
-        <div style="font-weight:600;">${state.header.student}</div>
-        <div style="font-weight:600;">${state.header.teacher}</div>
-        <div style="font-weight:600;">${state.header.subject}</div>
-        <div style="font-weight:600;">${state.header.info}</div>
-      </div>
-    </div>
-  `;
-  const titleHtml=`<div style="text-align:center; font-weight:bold; font-size:18px; margin-bottom:16px;">${state.examTitle}</div>`;
-  let questionsHtml='';
-  state.questions.forEach((q,i)=>{
-    const linesHtml=Array(q.lines).fill('<div style="border-bottom:1px solid #000; height:20px; margin-top:8px;"></div>').join('');
-    const imageHtml=q.image?`<div style="text-align:center; margin:8px 0;"><img src="${q.image}" style="width:${q.imageSize}%; max-width:100%;"></div>`:'';
-    questionsHtml+=`<div style="margin-bottom:16px;"><strong>${i+1}.</strong> ${q.text}${imageHtml}${linesHtml}</div>`;
+  // gerar PDF apenas com o conteúdo de #print-area
+  function exportPDF() {
+    if (!state.questions || state.questions.length === 0) { showMessage('Nenhuma questão para exportar'); return; }
+    renderPrintableContent();
+    const element = document.getElementById('print-area');
+    element.style.display = 'block';
+    // scroll to top para evitar cortes
+    window.scrollTo(0, 0);
+
+    const filename = `${(document.getElementById('exam-title').textContent || 'Prova').replace(/[^\w\- ]/g,'')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`;
+
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      element.style.display = 'none';
+      showMessage('PDF gerado com sucesso!');
+    }).catch(err => {
+      console.error(err);
+      element.style.display = 'none';
+      showMessage('Erro ao gerar PDF — veja console.');
+    });
+  }
+
+  // limpar exame
+  function clearExam() {
+    if (!confirm('Deseja realmente limpar toda a prova?')) return;
+    try { localStorage.removeItem('examState'); } catch(e){}
+    state.questions = [];
+    state.header.logo = '';
+    state.header.schoolName = 'Nome da Escola';
+    state.header.student = 'Aluno(a):';
+    state.header.teacher = 'Professor(a):';
+    state.header.subject = 'Componente curricular:';
+    state.header.info = 'Ano/Turma: Data:';
+    state.examTitle = 'Título da Prova';
+    renderAll();
+  }
+
+  // botões
+  document.getElementById('export-pdf').addEventListener('click', exportPDF);
+  document.getElementById('clear-exam').addEventListener('click', clearExam);
+
+  // atualizar header e título ao editar (campos com data-key)
+  document.querySelectorAll('[contenteditable][data-key]').forEach(el=>{
+    el.addEventListener('input', e=>{
+      const key = e.target.dataset.key;
+      state.header[key] = e.target.textContent.trim();
+      saveState();
+    });
   });
-  target.innerHTML=headerHtml+titleHtml+questionsHtml;
-}
+  document.getElementById('exam-title').addEventListener('input', e=>{
+    state.examTitle = e.target.textContent.trim();
+    saveState();
+  });
 
-function exportPDF(){
-  if(state.questions.length===0){ showMessage('Nenhuma questão para exportar'); return; }
-  renderPrintableContent();
-  const element=document.getElementById('print-area'); element.style.display='block';
-  html2pdf().set({
-    margin: [10,10,10,10],
-    filename:`${state.examTitle.replace(/[^\w\- ]/g,'')}.pdf`,
-    image:{type:'jpeg', quality:0.98},
-    html2canvas:{scale:2},
-    jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}
-  }).from(element).save().then(()=>{ element.style.display='none'; showMessage('PDF gerado com sucesso!'); });
-}
+  // inicializa
+  loadState();
+</script>
 
-// Botões
-document.getElementById('export-pdf').add
+</body>
+</html>
