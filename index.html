@@ -1,58 +1,46 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Gerador de Provas — Ajuste A4 1 página</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerador de Provas — Ajustado (1 página A4)</title>
 
-<!-- Tailwind (só utilitário, pode remover se quiser estilos próprios) -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- html2pdf -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Tailwind CDN (apenas utilitário) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- html2pdf (gera PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<style>
-  :root{
-    --bg:#f8fafc; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb;
-  }
-  html.dark { --bg:#0f172a; --card:#111827; --text:#f3f4f6; --muted:#9ca3af; --border:#374151; }
-  body{font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:var(--text); margin:0;}
-  .container{max-width:1100px;margin:1rem auto;padding:1rem;}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:.6rem;padding:1rem;box-shadow:0 6px 18px rgba(16,24,40,0.04);}
-  [contenteditable]:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,0.12);border-radius:4px;}
-  .fillable-line{display:inline-block;border-bottom:1px solid currentColor;margin-left:.5rem;min-width:140px;}
-  .question-line{border-bottom:2px solid #cbd5e1;min-height:1.2rem;margin:.5rem 0;}
-  .image-drop{border:2px dashed #d1d5db;padding:10px;border-radius:8px;text-align:center;cursor:pointer;}
-  .image-drop.drag-over{border-color:#3b82f6;background:rgba(59,130,246,0.04);}
-  .btn{display:inline-block;padding:.5rem .75rem;border-radius:.5rem;cursor:pointer;}
-  .small{font-size:.875rem;}
-  /* PDF / A4 preview */
-  .pdf-page{width:210mm;min-height:297mm;background:#fff;padding:20mm;border-radius:6px;box-sizing:border-box;margin:0 auto;position:relative;}
-  /* cabeçalho maior e empilhado ao lado da logo */
-  .header-preview{display:flex;gap:1rem;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:10px;}
-  .logo-box img{max-height:70px;max-width:160px;display:block;}
-  .header-info{font-size:14px;line-height:1.3;}
-  .header-info .line{margin-bottom:2px;}
-  /* colunas das questões (ajustável via JS) */
-  #question-list{column-gap:18px;}
-  .question-card{break-inside:avoid;page-break-inside:avoid;margin-bottom:10px;padding:6px;border-radius:6px;}
-  .question-text{min-height:1.4rem;}
-  .response-line{border-bottom:2px solid #000;height:20px;margin-top:8px;}
-  /* controls hidden in PDF generation */
-  .no-print{display:block;}
-  @media print{
-    .no-print{display:none !important;}
-    body{background:#fff;color:#000;}
-    .pdf-page{padding:12mm;box-shadow:none;}
-  }
-  /* imagem - resizer handle */
-  .img-wrap{position:relative;display:inline-block;}
-  .resize-handle{position:absolute;right:4px;bottom:4px;background:#fff;border:1px solid #ccc;border-radius:4px;padding:3px;cursor:se-resize;opacity:.9}
-  /* mobile fixes */
-  @media (max-width:768px){
-    .header-preview{flex-direction:row;gap:.6rem}
-    .header-info{font-size:13px;}
-  }
-</style>
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;}
+    html.dark{--bg:#0f172a;--card:#111827;--text:#f3f4f6;--muted:#9ca3af;--border:#374151;}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--text); margin:0}
+    .container{max-width:1100px;margin:1rem auto;padding:1rem}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:.6rem;padding:1rem;box-shadow:0 6px 18px rgba(16,24,40,.04)}
+    [contenteditable]:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.12);border-radius:4px}
+    .image-drop{border:2px dashed #d1d5db;padding:10px;border-radius:8px;text-align:center;cursor:pointer}
+    .image-drop.drag-over{border-color:#3b82f6;background:rgba(59,130,246,0.04)}
+    .btn{display:inline-block;padding:.5rem .75rem;border-radius:.5rem;cursor:pointer}
+    .small{font-size:.875rem}
+    /* A4 preview */
+    .pdf-page{width:210mm;min-height:297mm;background:#fff;padding:18mm;box-sizing:border-box;margin:0 auto;position:relative;font-size:13px;line-height:1.35}
+    /* Cabeçalho: logo à esquerda, infos maiores à direita empilhadas */
+    .header-preview{display:flex;gap:1rem;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:10px}
+    .logo-box img{max-height:88px;max-width:170px;display:block}
+    .header-info{font-size:14px;line-height:1.4}
+    .header-info .line{margin-bottom:3px}
+    /* Container de questões usa columns (1 ou 2) controlado por JS */
+    #question-list{column-gap:20px}
+    .question-card{break-inside:avoid;page-break-inside:avoid;margin-bottom:8px;padding:6px;border-radius:6px}
+    .question-text{min-height:18px}
+    .response-line{border-bottom:2px solid #000;height:20px;margin-top:8px}
+    /* controls ocultos no PDF */
+    .no-print{display:block}
+    @media print{.no-print{display:none !important}}
+    /* mobile tweaks */
+    @media (max-width:768px){.header-info{font-size:13px}}
+    /* indicador drag */
+    .drag-over-indicator{height:4px;background:#3b82f6;margin-bottom:6px}
+  </style>
 </head>
 <body>
 
@@ -61,46 +49,46 @@
     <div class="flex justify-between items-center mb-3">
       <h1 class="text-xl font-bold">Gerador de Provas — Forçar 1 página A4</h1>
       <div class="flex gap-2 items-center">
-        <button id="clear-btn" class="btn bg-red-500 text-white">Limpar</button>
-        <button id="export-btn" class="btn bg-green-600 text-white">Gerar PDF (1 página)</button>
+        <button id="btn-clear" class="btn bg-red-500 text-white">Limpar</button>
+        <button id="btn-export" class="btn bg-green-600 text-white">Gerar PDF (1 página)</button>
       </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label class="small block mb-1">Logo (arraste/solte ou clique)</label>
+        <label class="small block mb-1">Logo (arraste / clique)</label>
         <div id="logo-drop" class="image-drop">
-          <input id="logo-input" type="file" accept="image/*" style="display:none">
+          <input id="logo-file" type="file" accept="image/*" style="display:none">
           <div id="logo-placeholder">Arraste ou clique para adicionar logo</div>
           <div id="logo-preview-box" style="display:none;margin-top:8px;">
-            <img id="logo-preview" src="" alt="Logo" style="max-height:80px">
-            <div><button id="remove-logo" class="btn bg-gray-200 mt-2">Remover</button></div>
+            <img id="logo-preview" src="" alt="Logo" style="max-height:88px">
+            <div><button id="logo-remove" class="btn bg-gray-200 mt-2">Remover</button></div>
           </div>
         </div>
 
         <div class="mt-4">
           <label class="small block mb-1">Cabeçalho (edite)</label>
-          <input class="card w-full mb-2" id="school" placeholder="Nome da Escola" value="Nome da Escola">
-          <input class="card w-full mb-2" id="teacher" placeholder="Professor(a)" value="Professor(a)">
-          <input class="card w-full mb-2" id="student" placeholder="Aluno(a)" value="Aluno(a):">
-          <input class="card w-full mb-2" id="subject" placeholder="Componente curricular" value="Componente curricular:">
+          <input id="inp-school" class="card w-full mb-2" placeholder="Nome da Escola" value="Nome da Escola">
+          <input id="inp-teacher" class="card w-full mb-2" placeholder="Professor(a)" value="Professor(a)">
+          <input id="inp-student" class="card w-full mb-2" placeholder="Aluno(a)" value="Aluno(a):">
+          <input id="inp-subject" class="card w-full mb-2" placeholder="Componente curricular" value="Componente curricular:">
           <div class="flex gap-2">
-            <input class="card w-1/2" id="grade" placeholder="Série/Turma" value="Série/Turma">
-            <input class="card w-1/2" id="date" placeholder="Data" value="">
+            <input id="inp-grade" class="card w-1/2" placeholder="Série/Turma" value="Série/Turma">
+            <input id="inp-date" class="card w-1/2" placeholder="Data" value="">
           </div>
         </div>
       </div>
 
       <div>
         <label class="small block mb-1">Título da Prova</label>
-        <div id="title" contenteditable="true" class="card" style="min-height:44px">Título da Prova</div>
+        <div id="inp-title" contenteditable="true" class="card" style="min-height:44px">Título da Prova</div>
 
         <div class="mt-3">
           <label class="small block mb-1">Adicionar/colar questões (uma por linha)</label>
           <textarea id="paste-area" rows="5" class="card w-full" placeholder="Cole aqui — cada linha vira uma questão"></textarea>
           <div class="flex gap-2 mt-2">
-            <button id="add-paste" class="btn bg-blue-600 text-white">Adicionar coladas</button>
-            <button id="add-manual" class="btn bg-gray-200">Adicionar questão manual</button>
+            <button id="btn-add-paste" class="btn bg-blue-600 text-white">Adicionar coladas</button>
+            <button id="btn-add-manual" class="btn bg-gray-200">Adicionar questão manual</button>
           </div>
         </div>
       </div>
@@ -108,13 +96,10 @@
   </div>
 
   <!-- preview A4 -->
-  <div id="preview-wrap" class="card mt-4">
+  <div class="card mt-4">
     <div id="a4" class="pdf-page" role="document" aria-label="Preview A4">
-      <!-- header preview -->
       <header class="header-preview" id="header-preview">
-        <div class="logo-box" id="logo-box" style="min-width:120px;">
-          <img id="logo-img-preview" src="" alt="Logo" style="display:none;">
-        </div>
+        <div class="logo-box" id="logo-box"><img id="logo-img-preview" src="" alt="Logo" style="display:none"></div>
         <div class="header-info" id="header-info">
           <div class="line"><strong>Escola:</strong> <span id="p-school">Nome da Escola</span></div>
           <div class="line"><strong>Professor(a):</strong> <span id="p-teacher">Professor(a)</span></div>
@@ -124,71 +109,76 @@
         </div>
       </header>
 
-      <h2 id="preview-title" class="text-center" style="font-weight:700;font-size:18px;margin:8px 0 12px 0;">Título da Prova</h2>
+      <h2 id="preview-title" class="text-center" style="font-weight:700;font-size:18px;margin:8px 0 12px 0">Título da Prova</h2>
 
-      <!-- area de questões: column-count será definido dinamicamente (1 ou 2) -->
-      <section id="question-list"></section>
-
-      <!-- footer (adicionado no PDF gerado se desejado) -->
+      <section id="question-list" style="column-count:1"></section>
     </div>
   </div>
 </div>
 
 <script>
-/* ===============================
-   Estado e helpers
-   =============================== */
-const appState = {
-  logo: null, header: {school:'Nome da Escola', teacher:'Professor(a)', student:'Aluno(a):', subject:'Componente curricular:', grade:'Série/Turma', date: ''},
-  title:'Título da Prova', questions: []
+/* ===========================
+   Utils / State
+   =========================== */
+const state = {
+  logo: null,
+  header: {
+    school: 'Nome da Escola',
+    teacher: 'Professor(a)',
+    student: 'Aluno(a):',
+    subject: 'Componente curricular:',
+    grade: 'Série/Turma',
+    date: new Date().toLocaleDateString('pt-BR')
+  },
+  title: 'Título da Prova',
+  questions: [] // {id, text, lines, image (dataURL), imageSize}
 };
 
-function saveLS(){ try{ localStorage.setItem('examApp.v1', JSON.stringify(appState)); }catch(e){} }
-function loadLS(){
-  try{
-    const raw = localStorage.getItem('examApp.v1');
-    if(raw){ const s = JSON.parse(raw); Object.assign(appState,s); }
-  }catch(e){}
+function save(){ try{ localStorage.setItem('exam_v2_state', JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{ const s = localStorage.getItem('exam_v2_state'); if(s) Object.assign(state, JSON.parse(s)); }catch(e){}
 }
-function qId(){ return 'q_'+Date.now()+'_'+Math.random().toString(36).slice(2,9); }
+function uid(){ return 'q_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
 
-/* mm to px measurement helper: create temporary element width mm and read offsetWidth */
+/* mm -> px helper */
 function mmToPx(mm){
-  const div = document.createElement('div');
-  div.style.width = mm + 'mm';
-  div.style.position = 'absolute';
-  div.style.left = '-9999px';
-  document.body.appendChild(div);
-  const px = div.getBoundingClientRect().width;
-  document.body.removeChild(div);
+  const el = document.createElement('div');
+  el.style.width = mm + 'mm';
+  el.style.position = 'absolute';
+  el.style.left = '-9999px';
+  document.body.appendChild(el);
+  const px = el.getBoundingClientRect().width;
+  document.body.removeChild(el);
   return px;
 }
 
-/* ===============================
-   Seletores
-   =============================== */
+/* small wait */
+function nextFrame(){ return new Promise(res => requestAnimationFrame(()=>setTimeout(res,10))); }
+
+/* ===========================
+   Elements
+   =========================== */
 const logoDrop = document.getElementById('logo-drop');
-const logoInput = document.getElementById('logo-input');
+const logoFile = document.getElementById('logo-file');
 const logoPreviewBox = document.getElementById('logo-preview-box');
-const logoPreviewImg = document.getElementById('logo-preview');
-const removeLogoBtn = document.getElementById('remove-logo');
+const logoPreview = document.getElementById('logo-preview');
+const logoRemove = document.getElementById('logo-remove');
 
-const schoolIn = document.getElementById('school');
-const teacherIn = document.getElementById('teacher');
-const studentIn = document.getElementById('student');
-const subjectIn = document.getElementById('subject');
-const gradeIn = document.getElementById('grade');
-const dateIn = document.getElementById('date');
+const inpSchool = document.getElementById('inp-school');
+const inpTeacher = document.getElementById('inp-teacher');
+const inpStudent = document.getElementById('inp-student');
+const inpSubject = document.getElementById('inp-subject');
+const inpGrade = document.getElementById('inp-grade');
+const inpDate = document.getElementById('inp-date');
 
-const titleEl = document.getElementById('title');
+const inpTitle = document.getElementById('inp-title');
 const pasteArea = document.getElementById('paste-area');
-const addPasteBtn = document.getElementById('add-paste');
-const addManualBtn = document.getElementById('add-manual');
+const btnAddPaste = document.getElementById('btn-add-paste');
+const btnAddManual = document.getElementById('btn-add-manual');
 
-const exportBtn = document.getElementById('export-btn');
-const clearBtn = document.getElementById('clear-btn');
+const btnExport = document.getElementById('btn-export');
+const btnClear = document.getElementById('btn-clear');
 
-const previewTitle = document.getElementById('preview-title');
 const pSchool = document.getElementById('p-school');
 const pTeacher = document.getElementById('p-teacher');
 const pStudent = document.getElementById('p-student');
@@ -196,399 +186,356 @@ const pSubject = document.getElementById('p-subject');
 const pGrade = document.getElementById('p-grade');
 const pDate = document.getElementById('p-date');
 const logoImgPreview = document.getElementById('logo-img-preview');
+const previewTitle = document.getElementById('preview-title');
 
 const questionList = document.getElementById('question-list');
 const a4 = document.getElementById('a4');
 
-/* ===============================
-   Inicialização
-   =============================== */
-(function init(){
-  loadLS();
-  // se vazio, criar 10 questões de exemplo (útil pra testes)
-  if(!appState.questions || appState.questions.length === 0){
-    // default empty
-  }
-  // preencher data se vazio
-  if(!appState.header.date) appState.header.date = new Date().toLocaleDateString('pt-BR');
+/* ===========================
+   Init / Restore
+   =========================== */
+load();
+if(!state.header.date) state.header.date = new Date().toLocaleDateString('pt-BR');
+if(!state.questions) state.questions = [];
+// if empty for testing, you can uncomment to add sample:
+// if(state.questions.length===0){ for(let i=1;i<=10;i++) state.questions.push({id:uid(), text: `${i}. Questão de exemplo ${i}`, lines:4, image:null, imageSize:100}); }
 
-  // preencher inputs UI
-  schoolIn.value = appState.header.school;
-  teacherIn.value = appState.header.teacher;
-  studentIn.value = appState.header.student;
-  subjectIn.value = appState.header.subject;
-  gradeIn.value = appState.header.grade;
-  dateIn.value = appState.header.date;
-  titleEl.textContent = appState.title || 'Título da Prova';
-  if(appState.logo){ setLogo(appState.logo); }
-  renderPreview();
-})();
+inpSchool.value = state.header.school;
+inpTeacher.value = state.header.teacher;
+inpStudent.value = state.header.student;
+inpSubject.value = state.header.subject;
+inpGrade.value = state.header.grade;
+inpDate.value = state.header.date;
+inpTitle.textContent = state.title;
+if(state.logo){ setLogo(state.logo); }
+renderAll();
 
-/* ===============================
-   Logo handlers (drag & drop / click)
-   =============================== */
-logoDrop.addEventListener('click', ()=> logoInput.click());
-logoDrop.addEventListener('dragover', (e)=>{ e.preventDefault(); logoDrop.classList.add('drag-over'); });
+/* ===========================
+   Logo handlers
+   =========================== */
+logoDrop.addEventListener('click', ()=> logoFile.click());
+logoDrop.addEventListener('dragover', e=>{ e.preventDefault(); logoDrop.classList.add('drag-over'); });
 logoDrop.addEventListener('dragleave', ()=> logoDrop.classList.remove('drag-over'));
-logoDrop.addEventListener('drop', async (e)=>{ e.preventDefault(); logoDrop.classList.remove('drag-over'); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f && f.type.startsWith('image/')){ const url = await fileToDataURL(f); setLogo(url); }});
-logoInput.addEventListener('change', async (e)=>{ const f = e.target.files[0]; if(f) { const url = await fileToDataURL(f); setLogo(url); }});
-removeLogoBtn.addEventListener('click', ()=> { appState.logo = null; saveLS(); logoPreviewBox.style.display='none'; logoPreviewImg.src=''; logoImgPreview.style.display='none'; renderPreview(); });
+logoDrop.addEventListener('drop', async (e)=>{ e.preventDefault(); logoDrop.classList.remove('drag-over'); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) setLogo(await fileToDataURL(f)); });
+logoFile.addEventListener('change', async (e)=>{ const f = e.target.files[0]; if(f) setLogo(await fileToDataURL(f)); });
+logoRemove.addEventListener('click', ()=>{ state.logo = null; save(); logoPreviewBox.style.display='none'; logoPreview.src=''; logoImgPreview.style.display='none'; renderHeaderPreview(); });
 
-async function fileToDataURL(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
-function setLogo(dataUrl){ appState.logo = dataUrl; saveLS(); logoPreviewBox.style.display='block'; logoPreviewImg.src = dataUrl; logoImgPreview.src = dataUrl; logoImgPreview.style.display = 'block'; renderPreview(); }
+async function fileToDataURL(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(file); }); }
+function setLogo(dataurl){ state.logo = dataurl; save(); logoPreviewBox.style.display='block'; logoPreview.src = dataurl; logoImgPreview.src = dataurl; logoImgPreview.style.display='block'; renderHeaderPreview(); }
 
-/* ===============================
-   Header inputs change
-   =============================== */
-[schoolIn, teacherIn, studentIn, subjectIn, gradeIn, dateIn].forEach(inp=>{
-  inp.addEventListener('input', (e)=>{
-    const id = e.target.id;
-    appState.header[id === 'school' ? 'school' : id === 'teacher' ? 'teacher' : id === 'student' ? 'student' : id === 'subject' ? 'subject' : id==='grade' ? 'grade' : 'date'] = e.target.value;
-    saveLS();
-    renderPreview();
+/* ===========================
+   Header bindings
+   =========================== */
+[inpSchool, inpTeacher, inpStudent, inpSubject, inpGrade, inpDate].forEach(inp=>{
+  inp.addEventListener('input', e=>{
+    const id = e.target.id.replace('inp-','');
+    state.header[id] = e.target.value;
+    save();
+    renderHeaderPreview();
   });
 });
-titleEl.addEventListener('input', (e)=>{ appState.title = e.target.textContent; saveLS(); renderPreview(); });
+inpTitle.addEventListener('input', (e)=>{ state.title = e.target.textContent; save(); renderHeaderPreview(); });
 
-/* ===============================
-   Adicionar questões
-   =============================== */
-addManualBtn.addEventListener('click', ()=>{
-  appState.questions.push({ id:qId(), text:'Nova questão...', lines:3, image:null, imageSize:100, answer:'' });
-  saveLS(); renderPreview();
-  // foco na última criada
-  setTimeout(()=> {
-    const el = document.querySelector(`[data-id="${appState.questions[appState.questions.length-1].id}"] .question-text`);
-    if(el){ el.focus(); }
-  },50);
+function renderHeaderPreview(){
+  pSchool.textContent = state.header.school;
+  pTeacher.textContent = state.header.teacher;
+  pStudent.textContent = state.header.student;
+  pSubject.textContent = state.header.subject;
+  pGrade.textContent = state.header.grade;
+  pDate.textContent = state.header.date;
+  previewTitle.textContent = state.title || 'Título da Prova';
+}
+
+/* ===========================
+   Questions: add / paste / render
+   =========================== */
+btnAddManual.addEventListener('click', ()=>{
+  state.questions.push({ id: uid(), text: 'Nova questão...', lines: 3, image: null, imageSize: 100 });
+  save(); renderQuestions();
+  setTimeout(()=>{ const el = document.querySelector(`[data-id="${state.questions[state.questions.length-1].id}"] .question-text`); if(el) el.focus(); },50);
 });
-addPasteBtn.addEventListener('click', ()=>{
+
+btnAddPaste.addEventListener('click', ()=>{
   const raw = pasteArea.value.trim();
-  if(!raw) return alert('Cole algo antes');
+  if(!raw) return alert('Cole alguma questão antes.');
   const lines = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  lines.forEach(line => appState.questions.push({id:qId(), text:line, lines:3, image:null, imageSize:100, answer:''}));
+  lines.forEach(l => state.questions.push({ id: uid(), text: l, lines: 3, image: null, imageSize: 100 }));
   pasteArea.value = '';
-  saveLS(); renderPreview();
+  save(); renderQuestions();
 });
 
-/* ===============================
-   Render preview (visual)
-   =============================== */
-function renderPreview(){
-  // header
-  pSchool.textContent = appState.header.school;
-  pTeacher.textContent = appState.header.teacher;
-  pStudent.textContent = appState.header.student;
-  pSubject.textContent = appState.header.subject;
-  pGrade.textContent = appState.header.grade;
-  pDate.textContent = appState.header.date;
-  previewTitle.textContent = appState.title || 'Título da Prova';
-  if(appState.logo){ logoImgPreview.src = appState.logo; logoImgPreview.style.display='block'; } else { logoImgPreview.style.display='none'; }
+function renderAll(){ renderHeaderPreview(); renderQuestions(); }
 
-  // questions
+function renderQuestions(){
   questionList.innerHTML = '';
-  if(!appState.questions || appState.questions.length === 0){
-    questionList.innerHTML = `<p style="column-span:all;color:${getComputedStyle(document.body).getPropertyValue('--muted')};">Nenhuma questão adicionada.</p>`;
+  if(state.questions.length === 0) {
+    questionList.innerHTML = `<p style="color:var(--muted)">Nenhuma questão adicionada.</p>`;
     return;
   }
 
-  appState.questions.forEach((q, idx)=> {
-    const card = document.createElement('article');
-    card.className = 'question-card';
-    card.dataset.id = q.id;
-    card.innerHTML = `
-      <div style="display:flex;gap:8px;">
-        <div style="flex:0 0 30px;font-weight:700;color:#2563eb">${idx+1}.</div>
-        <div style="flex:1;">
-          <div class="question-text" contenteditable="true" data-id="${q.id}" style="min-height:18px;padding:2px;">${q.text}</div>
-          ${q.image ? `<div class="img-wrap" style="margin-top:6px;"><img src="${q.image}" class="qimg" style="width:${q.imageSize}%"><div class="resize-handle" data-id="${q.id}">⬚</div></div>` : ''}
-          <div class="response-lines" data-id="${q.id}" style="margin-top:6px;">
-            ${Array(q.lines).fill('<div class="response-line"></div>').join('')}
-          </div>
-          <div style="display:flex;gap:6px;margin-top:6px;">
+  // By default we'll set 1 column; the export logic will try 1/2 and shrink as needed.
+  questionList.style.columnCount = 1;
+
+  state.questions.forEach((q, idx)=>{
+    const node = document.createElement('div');
+    node.className = 'question-card';
+    node.dataset.id = q.id;
+    node.innerHTML = `
+      <div style="display:flex;gap:8px">
+        <div style="flex:0 0 28px;font-weight:700;color:#2563eb">${idx+1}.</div>
+        <div style="flex:1">
+          <div class="question-text" contenteditable="true" data-id="${q.id}" style="padding:2px">${q.text}</div>
+          ${q.image ? `<div style="margin-top:6px"><img src="${q.image}" class="qimg" style="width:${q.imageSize}%"></div>` : ''}
+          <div class="response-lines" data-id="${q.id}" style="margin-top:8px">${Array(q.lines).fill('<div class="response-line"></div>').join('')}</div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
             <label class="small">Linhas <input type="range" min="0" max="10" value="${q.lines}" data-id="${q.id}" class="lines-slider"></label>
             <label class="small">Imagem <input type="file" accept="image/*" data-id="${q.id}" class="img-input"></label>
-            <button data-id="${q.id}" class="btn small bg-gray-200 del-btn">Remover</button>
+            <button data-id="${q.id}" class="btn bg-gray-200 del-btn">Remover</button>
           </div>
         </div>
       </div>
     `;
-    questionList.appendChild(card);
+    questionList.appendChild(node);
   });
 
-  // make contenteditable changes persist
+  // bind editable text
   questionList.querySelectorAll('.question-text').forEach(el=>{
-    el.addEventListener('input', (e)=>{
+    el.addEventListener('input', e=>{
       const id = e.target.dataset.id;
-      const q = appState.questions.find(x=>x.id===id);
-      if(q){ q.text = e.target.innerText; saveLS(); }
+      const q = state.questions.find(x=>x.id===id);
+      if(q){ q.text = e.target.innerText; save(); }
     });
-    el.addEventListener('blur', ()=> saveLS());
+    el.addEventListener('blur', ()=> save());
   });
 
   // lines slider
   questionList.querySelectorAll('.lines-slider').forEach(sl=>{
-    sl.addEventListener('input', (e)=>{
+    sl.addEventListener('input', e=>{
       const id = e.target.dataset.id;
-      const q = appState.questions.find(x=>x.id===id);
-      if(q){ q.lines = parseInt(e.target.value,10); saveLS(); renderPreview(); }
+      const q = state.questions.find(x=>x.id===id);
+      if(q){ q.lines = parseInt(e.target.value,10); save(); renderQuestions(); } // re-render to update lines
     });
   });
 
-  // image upload per-question
+  // image upload per question
   questionList.querySelectorAll('.img-input').forEach(inp=>{
     inp.addEventListener('change', async (e)=>{
-      const id = e.target.dataset.id;
       const f = e.target.files[0];
-      if(f && f.type.startsWith('image/')){
-        const data = await fileToDataURL(f);
-        const q = appState.questions.find(x=>x.id===id);
-        if(q){ q.image = data; q.imageSize = 90; saveLS(); renderPreview(); }
-      }
-    });
-  });
-
-  // delete question
-  questionList.querySelectorAll('.del-btn').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
+      if(!f) return;
+      if(!f.type.startsWith('image/')) return alert('Envie uma imagem válida.');
       const id = e.target.dataset.id;
-      appState.questions = appState.questions.filter(q=>q.id!==id);
-      saveLS(); renderPreview();
+      const data = await fileToDataURL(f);
+      const q = state.questions.find(x=>x.id===id);
+      if(q){ q.image = data; q.imageSize = 90; save(); renderQuestions(); }
     });
   });
 
-  // attach resize handle behavior for images
-  questionList.querySelectorAll('.resize-handle').forEach(handle=>{
-    const id = handle.dataset.id;
-    let startX=0, startWidth=0, dragging=false;
-    handle.addEventListener('pointerdown', (ev)=>{
-      ev.preventDefault();
-      dragging = true;
-      startX = ev.clientX;
-      const q = appState.questions.find(x=>x.id===id);
-      startWidth = q ? q.imageSize : 100;
-      handle.setPointerCapture(ev.pointerId);
+  // delete
+  questionList.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = e.target.dataset.id;
+      if(!confirm('Remover questão?')) return;
+      state.questions = state.questions.filter(q=>q.id !== id);
+      save(); renderQuestions();
     });
-    handle.addEventListener('pointermove', (ev)=>{
-      if(!dragging) return;
-      const dx = ev.clientX - startX;
-      // simple percent change by delta px relative to container width
-      const container = handle.closest('.img-wrap');
-      const contW = container ? container.getBoundingClientRect().width : 200;
-      let deltaPercent = (dx / contW) * 100;
-      const q = appState.questions.find(x=>x.id===id);
-      if(q){
-        q.imageSize = Math.max(10, Math.min(200, Math.round(startWidth + deltaPercent)));
-        // apply live
-        const img = container.querySelector('img.qimg');
-        if(img) img.style.width = q.imageSize + '%';
-      }
-    });
-    handle.addEventListener('pointerup', (ev)=>{ if(dragging){ dragging=false; saveLS(); } });
-    handle.addEventListener('lostpointercapture', ()=>{ dragging=false; });
   });
-
-  // allow dragging images to reposition? (We keep simple: resizing & uploading.)
 }
 
-/* ===============================
-   Export PDF — lógica "fit to one page"
-   =============================== */
-exportBtn.addEventListener('click', ()=> exportSinglePagePDF());
+/* ===========================
+   Export PDF: Fit-to-single-page algorithm
+   Strategy:
+     1) Clone preview element (A4) to offscreen.
+     2) Try layout with 1 column, base font.
+     3) If overflow, try 2 columns.
+     4) If still overflow, progressively reduce font size to minFont.
+     5) If still overflow, reduce line height / response-line height a bit.
+     6) If still overflow, apply final scale (transform: scale) so content height matches A4 inner height.
+   This guarantees single A4 output.
+   =========================== */
+
+btnExport.addEventListener('click', () => exportSinglePagePDF());
 
 async function exportSinglePagePDF(){
-  if(!appState.questions || appState.questions.length === 0) return alert('Adicione questões antes.');
-  // Clone the preview A4 element (so we don't mutate UI)
-  const clone = a4.cloneNode(true);
-  // apply current values in clone (title, header, questions are cloned already if we updated DOM)
-  // We'll insert clone offscreen for measurement and manipulation.
+  if(state.questions.length === 0) return alert('Adicione questões antes de gerar o PDF.');
+
+  // Clone preview node
+  const source = a4;
+  const clone = source.cloneNode(true);
+  // place offscreen
   clone.style.position = 'absolute';
   clone.style.left = '-9999px';
   clone.style.top = '0';
-  clone.style.transform = 'none';
+  clone.style.zIndex = 9999;
+  // ensure background white
+  clone.style.background = '#fff';
   document.body.appendChild(clone);
 
-  // target inner area (in clone)
-  const cloneQuestionList = clone.querySelector('#question-list');
-
-  // PARAMETERS: margins in mm
+  // inner margins for A4 (mm)
   const marginTop_mm = 10, marginBottom_mm = 10, marginLeft_mm = 10, marginRight_mm = 10;
   const a4Width_mm = 210, a4Height_mm = 297;
-  const innerWidth_mm = a4Width_mm - marginLeft_mm - marginRight_mm;
-  const innerHeight_mm = a4Height_mm - marginTop_mm - marginBottom_mm;
+  const innerW_mm = a4Width_mm - marginLeft_mm - marginRight_mm;
+  const innerH_mm = a4Height_mm - marginTop_mm - marginBottom_mm;
 
-  const a4InnerWidthPx = mmToPx(innerWidth_mm);
-  const a4InnerHeightPx = mmToPx(innerHeight_mm);
+  const innerW_px = mmToPx(innerW_mm);
+  const innerH_px = mmToPx(innerH_mm);
 
-  // set clone width to inner width in px so measurements are consistent
-  clone.style.width = a4InnerWidthPx + 'px';
-  clone.style.padding = '0'; // inner padding removed as we consider margins separately
+  // force clone width to inner width px to standardize measurement
+  clone.style.width = innerW_px + 'px';
+  // remove extra padding from clone so we measure content area properly
+  clone.style.padding = '0';
   clone.style.boxSizing = 'border-box';
 
-  // Setup initial layout properties
-  cloneQuestionList.style.columnGap = '18px';
+  // find question-list inside clone
+  const cloneQuestionList = clone.querySelector('#question-list');
 
-  // default font size px
-  let fontPx = 14; // starting px font-size for body of clone
-  const minFontPx = 9;
+  // base settings
+  let baseFontPx = 14;         // starting font px (for body inside clone)
+  const minFontPx = 9;         // minimum acceptable font (readability)
+  let currentFontPx = baseFontPx;
 
-  // helper to set font size on clone root
-  function applyFont(px){
+  // adjust response line height factor relative to font
+  let responseLineHeightPx = Math.round(currentFontPx * 1.45);
+
+  // helper to apply typography and line heights
+  function applyTypography(px){
     clone.style.fontSize = px + 'px';
-    // adjust response-line height proportionally
-    clone.querySelectorAll('.response-line').forEach(line=>{
-      line.style.height = Math.max(10, Math.round(px * 1.1)) + 'px';
-    });
+    // adjust response-line heights
+    clone.querySelectorAll('.response-line').forEach(rl => { rl.style.height = Math.max(8, Math.round(px * 1.45)) + 'px'; });
+    // adjust spacing small touches
+    clone.querySelectorAll('.question-card').forEach(qc => { qc.style.marginBottom = Math.max(4, Math.round(px / 3)) + 'px'; });
   }
 
-  // ensure we remove any transforms
-  clone.style.transform = 'none';
+  // helper check overflow
+  function contentHeight(){ return clone.scrollHeight; }
+  function contentWidth(){ return clone.getBoundingClientRect().width; }
 
-  // Try strategies in order:
-  // 1) 1 column (default) with starting fontPx
-  // 2) 2 columns if 1 doesn't fit
-  // 3) reduce font progressively while trying 1 or 2 columns
-  // 4) if still too tall, compute final scale factor and apply it
+  // initial set: 1 column
+  cloneQuestionList.style.columnCount = 1;
+  applyTypography(currentFontPx);
+  await nextFrame();
 
-  // function to check fit
-  function contentHeightPx(){
-    // use scrollHeight or getBoundingClientRect height
-    return clone.scrollHeight;
-  }
-  function contentWidthPx(){
-    return clone.getBoundingClientRect().width;
-  }
+  let fits = (contentHeight() <= innerH_px);
 
-  let fit = false;
-  let usedColumns = 1;
-
-  // Try 1 column first
-  cloneQuestionList.style.columnCount = '1';
-  applyFont(fontPx);
-  await waitFrame();
-
-  if(contentHeightPx() <= a4InnerHeightPx){ fit = true; usedColumns=1; }
-
-  // try 2 columns
-  if(!fit){
-    cloneQuestionList.style.columnCount = '2';
-    await waitFrame();
-    if(contentHeightPx() <= a4InnerHeightPx){ fit = true; usedColumns=2; }
+  // try 2 columns if not fit
+  if(!fits){
+    cloneQuestionList.style.columnCount = 2;
+    await nextFrame();
+    fits = (contentHeight() <= innerH_px);
   }
 
-  // try reducing font gradually
-  while(!fit && fontPx > minFontPx){
-    fontPx -= 1;
-    applyFont(fontPx);
-    await waitFrame();
-    if(contentHeightPx() <= a4InnerHeightPx){ fit = true; break; }
-    // if not fit, try switching columns (1 or 2) and check
-    if(cloneQuestionList.style.columnCount === '1'){
-      cloneQuestionList.style.columnCount = '2';
-      await waitFrame();
-      if(contentHeightPx() <= a4InnerHeightPx){ fit = true; usedColumns = 2; break; }
-    } else {
-      // switch back to 1 and try smaller font
-      cloneQuestionList.style.columnCount = '1';
-      await waitFrame();
-      if(contentHeightPx() <= a4InnerHeightPx){ fit = true; usedColumns = 1; break; }
+  // reduce font progressively while toggling columns to try to fit
+  while(!fits && currentFontPx > minFontPx){
+    currentFontPx -= 1;
+    applyTypography(currentFontPx);
+    // alternate columns to test both layouts
+    cloneQuestionList.style.columnCount = (cloneQuestionList.style.columnCount === '2') ? '1' : '2';
+    await nextFrame();
+    fits = (contentHeight() <= innerH_px);
+    if(fits) break;
+  }
+
+  // if still not fit, reduce spacing a bit (compact response lines and card margins)
+  if(!fits){
+    // tighten response lines and margins gradually
+    let tightenSteps = 4;
+    while(!fits && tightenSteps-- > 0){
+      clone.querySelectorAll('.response-line').forEach(rl => {
+        const cur = parseFloat(getComputedStyle(rl).height) || responseLineHeightPx;
+        rl.style.height = Math.max(6, cur - 2) + 'px';
+      });
+      clone.querySelectorAll('.question-card').forEach(qc => {
+        const mb = parseFloat(getComputedStyle(qc).marginBottom) || 8;
+        qc.style.marginBottom = Math.max(2, mb - 1) + 'px';
+      });
+      await nextFrame();
+      fits = (contentHeight() <= innerH_px);
     }
   }
 
-  // If still not fit, compute scale factor
+  // final fallback: scale (shrink-to-fit)
   let finalScale = 1;
-  if(!fit){
-    const heightFactor = a4InnerHeightPx / contentHeightPx();
-    const widthFactor = a4InnerWidthPx / contentWidthPx();
-    finalScale = Math.min(heightFactor, widthFactor, 1);
-    // apply transform scale
+  if(!fits){
+    const hFactor = innerH_px / contentHeight();
+    const wFactor = innerW_px / contentWidth();
+    finalScale = Math.min(hFactor, wFactor, 1);
+    // apply transform scale to clone
     clone.style.transformOrigin = 'top left';
     clone.style.transform = `scale(${finalScale})`;
+    // To ensure html2pdf captures scaled result correctly, increase html2canvas scale slightly
   }
 
-  // Now generate PDF from the clone element
-  // But we must ensure html2pdf renders the scaled clone correctly. We'll use html2pdf directly.
-  const filename = `${(appState.title || 'Prova').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`;
-
-  // Prepare options: set html2canvas scale based on devicePixelRatio for quality
+  // Prepare html2pdf options
+  const filename = `${(state.title || 'Prova').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`;
   const opt = {
-    margin: [marginTop_mm, marginLeft_mm, marginBottom_mm, marginRight_mm].map(mm=>mm), // note html2pdf expects values in mm? We'll treat as px fallback; main A4 size controlled by clone width/scale
+    margin: [marginTop_mm, marginLeft_mm, marginBottom_mm, marginRight_mm], // mm
     filename: filename,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: Math.min(2, window.devicePixelRatio || 1.5), useCORS:true, allowTaint:true },
+    html2canvas: { scale: Math.min(2, window.devicePixelRatio || 1.5), useCORS: true, allowTaint: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
   };
 
   try{
-    // Make clone visible for html2pdf to capture scaled appearance
-    clone.style.position = 'fixed';
-    clone.style.left = '50%';
-    clone.style.top = '50%';
-    clone.style.transformOrigin = 'top left';
-    // If we applied scaling, keep computed transform; ensure center-ish placement
-    const offsetLeft = (window.innerWidth / 2) - (parseFloat(clone.style.width || clone.getBoundingClientRect().width) * (finalScale || 1) / 2);
-    clone.style.left = offsetLeft + 'px';
-    clone.style.top = '10px';
-    clone.style.zIndex = 9999;
-    clone.style.background = '#fff';
-
-    // Wait a frame for browser to paint changes
-    await waitFrame();
-
-    // Use html2pdf to save clone
     await html2pdf().set(opt).from(clone).save();
-
   }catch(err){
     console.error('Erro ao gerar PDF', err);
-    alert('Erro ao gerar PDF. Veja console para detalhes.');
+    alert('Erro ao gerar PDF. Veja console.');
   }finally{
-    // cleanup clone
+    // cleanup
     clone.remove();
   }
 }
 
-/* small helper to await next frame */
-function waitFrame(){ return new Promise(res => requestAnimationFrame(()=>setTimeout(res,10))); }
+/* ===========================
+   Helpers for interactions
+   =========================== */
+function fileToDataURL(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(file); }); }
 
-/* ===============================
-   clear and basic persistence
-   =============================== */
-clearBtn.addEventListener('click', ()=>{
+/* ===========================
+   Simple clear
+   =========================== */
+btnClear.addEventListener('click', ()=>{
   if(!confirm('Limpar tudo?')) return;
-  appState.logo = null;
-  appState.header = {school:'Nome da Escola', teacher:'Professor(a)', student:'Aluno(a):', subject:'Componente curricular:', grade:'Série/Turma', date: new Date().toLocaleDateString('pt-BR')};
-  appState.title = 'Título da Prova';
-  appState.questions = [];
-  saveLS(); location.reload();
+  state.logo = null;
+  state.header = { school:'Nome da Escola', teacher:'Professor(a)', student:'Aluno(a):', subject:'Componente curricular:', grade:'Série/Turma', date: new Date().toLocaleDateString('pt-BR') };
+  state.title = 'Título da Prova';
+  state.questions = [];
+  save(); location.reload();
 });
 
-/* ===============================
-   Utility: add keyboard shortcut to create 10 sample math questions quickly (for testing)
-   =============================== */
-document.addEventListener('keydown', (e)=>{
-  if(e.ctrlKey && e.key === '1'){ // Ctrl+1 -> create 10 sample questions
-    appState.questions = [
-      {id:qId(), text:'1. Calcule 345 + 678 =', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'2. Resolva para x: 2x + 5 = 17', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'3. Qual é a área de um retângulo de 8m por 5m?', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'4. Converta 0,75 em fração.', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'5. Calcule 12 × 11 =', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'6. Se um triângulo tem lados 3,4,5, qual é seu perímetro?', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'7. Simplifique: (x^2 × x^3) / x', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'8. Resolva: 5! (fatorial de 5)', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'9. Qual a média de 8, 7 e 10?', lines:4, image:null, imageSize:100, answer:''},
-      {id:qId(), text:'10. Calcule o MMC de 6 e 8.', lines:4, image:null, imageSize:100, answer:''}
-    ];
-    saveLS(); renderPreview();
-  }
-});
+/* ===========================
+   Persist inputs -> state
+   =========================== */
+inpSchool.addEventListener('input', e=>{ state.header.school = e.target.value; save(); renderHeaderPreview(); });
+inpTeacher.addEventListener('input', e=>{ state.header.teacher = e.target.value; save(); renderHeaderPreview(); });
+inpStudent.addEventListener('input', e=>{ state.header.student = e.target.value; save(); renderHeaderPreview(); });
+inpSubject.addEventListener('input', e=>{ state.header.subject = e.target.value; save(); renderHeaderPreview(); });
+inpGrade.addEventListener('input', e=>{ state.header.grade = e.target.value; save(); renderHeaderPreview(); });
+inpDate.addEventListener('input', e=>{ state.header.date = e.target.value; save(); renderHeaderPreview(); });
+inpTitle.addEventListener('input', e=>{ state.title = e.target.textContent; save(); renderHeaderPreview(); });
 
-/* ===============================
-   Save state when leaving page
-   =============================== */
-window.addEventListener('beforeunload', ()=> saveLS());
+/* ===========================
+   Render header + questions init
+   =========================== */
+function renderAll(){ renderHeaderPreview(); renderQuestions(); }
+function renderHeaderPreview(){
+  pSchool.textContent = state.header.school;
+  pTeacher.textContent = state.header.teacher;
+  pStudent.textContent = state.header.student;
+  pSubject.textContent = state.header.subject;
+  pGrade.textContent = state.header.grade;
+  pDate.textContent = state.header.date;
+  previewTitle.textContent = state.title || 'Título da Prova';
+  if(state.logo){ logoImgPreview.src = state.logo; logoImgPreview.style.display = 'block'; logoPreviewBox.style.display='block'; logoPreview.src = state.logo; } else { logoImgPreview.style.display='none'; logoPreviewBox.style.display='none'; }
+}
+
+/* ensure changes saved on unload */
+window.addEventListener('beforeunload', ()=> save());
+
+/* initial render of questions */
+renderQuestions();
 
 </script>
 </body>
 </html>
+```0
