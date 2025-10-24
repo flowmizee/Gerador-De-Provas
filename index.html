@@ -5,19 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Provas - Página Única A4</title>
     
-    <!-- 
-    ╔══════════════════════════════════════════════════════════════════════════════╗
-    ║  GERADOR DE PROVAS - README                                                  ║
-    ╠══════════════════════════════════════════════════════════════════════════════╣
-    ║  Como usar:                                                                  ║
-    ║  1. Preencha o cabeçalho (escola, professor, componente, etc.)               ║
-    ║  2. Ajuste o tamanho da logo com o novo slider.                              ║
-    ║  3. Cole questões (uma por linha) ou adicione manualmente.                   ║
-    ║  4. Ajuste linhas de resposta e adicione imagens se necessário.              ║
-    ║  5. Clique "Gerar PDF" - o sistema automaticamente ajusta para 1 página.     ║
-    ╚══════════════════════════════════════════════════════════════════════════════╝
-    -->
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     
@@ -123,7 +110,8 @@
         
         input[type="text"],
         input[type="date"],
-        textarea {
+        textarea,
+        input[type="number"] {
             width: 100%;
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
@@ -135,15 +123,11 @@
         
         input[type="text"]:focus,
         input[type="date"]:focus,
-        textarea:focus {
+        textarea:focus,
+        input[type="number"]:focus {
             outline: none;
             border-color: rgb(var(--primary));
             box-shadow: 0 0 0 3px rgb(var(--primary) / 0.1);
-        }
-        
-        input[type="range"] {
-            width: 100%;
-            cursor: pointer;
         }
         
         textarea {
@@ -239,7 +223,7 @@
             min-height: 297mm;
             background: white;
             margin: 0 auto;
-            padding: 12mm;
+            padding: 15mm;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transform-origin: top center;
         }
@@ -255,16 +239,17 @@
         /* Header */
         .exam-header {
             display: grid;
-            grid-template-columns: 80px 1fr; /* Default, será ajustado via JS */
-            gap: 1rem;
+            grid-template-columns: auto 1fr;
+            gap: 1.5rem;
             margin-bottom: 1.5rem;
             padding-bottom: 1rem;
             border-bottom: 2px solid rgb(var(--text-primary));
+            align-items: start;
         }
         
         .logo-container {
-            width: 80px; /* Default, será ajustado via JS */
-            height: 80px; /* Default, será ajustado via JS */
+            width: 100px;
+            height: 100px;
             border: 2px dashed rgb(var(--border));
             border-radius: 0.5rem;
             display: flex;
@@ -272,13 +257,14 @@
             justify-content: center;
             overflow: hidden;
             background: rgb(var(--background));
-            transition: width 0.2s, height 0.2s;
+            margin-top: 0.5rem;
         }
         
         .logo-container img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
+            transition: all 0.3s ease;
         }
         
         .logo-placeholder {
@@ -290,8 +276,9 @@
         .header-info {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            font-size: 0.9rem;
+            gap: 0.75rem;
+            font-size: 1rem;
+            line-height: 1.6;
         }
         
         .header-field {
@@ -300,6 +287,8 @@
         
         .header-field strong {
             color: rgb(var(--text-primary));
+            display: block;
+            margin-bottom: 0.25rem;
         }
         
         [contenteditable="true"] {
@@ -307,6 +296,9 @@
             transition: outline var(--transition);
             padding: 0.125rem;
             border-radius: 0.25rem;
+            min-height: 1.5em;
+            display: inline-block;
+            min-width: 100px;
         }
         
         [contenteditable="true"]:hover {
@@ -320,35 +312,39 @@
         }
         
         .exam-title {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 700;
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin: 2rem 0;
             color: rgb(var(--text-primary));
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            padding: 1rem;
+            border: 2px solid rgb(var(--primary));
+            border-radius: 0.5rem;
         }
         
         /* Questions */
         .questions-container {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.5rem;
         }
         
         .questions-container.two-columns {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            gap: 1.5rem;
         }
         
         .question-item {
             background: white;
             border: 1px solid rgb(var(--border));
             border-radius: 0.375rem;
-            padding: 0.75rem;
+            padding: 1rem;
             cursor: move;
             transition: all var(--transition);
+            break-inside: avoid;
         }
         
         .question-item:hover {
@@ -363,12 +359,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
         }
         
         .question-number {
             font-weight: 700;
             color: rgb(var(--primary));
+            font-size: 1.1rem;
         }
         
         .question-controls {
@@ -377,28 +374,29 @@
         }
         
         .question-text {
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
             color: rgb(var(--text-primary));
         }
         
         .question-image {
             max-width: 100%;
             height: auto;
-            margin: 0.5rem 0;
-            border-radius: 0.25rem;
+            margin: 0.75rem 0;
+            border-radius: 0.375rem;
             border: 1px solid rgb(var(--border));
+            display: block;
         }
         
         .answer-lines {
-            margin-top: 0.5rem;
+            margin-top: 0.75rem;
         }
         
         .answer-line {
             border-bottom: 1px solid rgb(var(--text-secondary));
-            height: 1.5rem;
-            margin-bottom: 0.25rem;
+            height: 1.8rem;
+            margin-bottom: 0.5rem;
         }
         
         /* Question Editor */
@@ -467,6 +465,20 @@
         
         input[type="file"] {
             display: none;
+        }
+        
+        /* Logo Size Controls */
+        .logo-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+        
+        .logo-size-input {
+            width: 80px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
         }
         
         /* Loading Overlay */
@@ -549,31 +561,143 @@
             border-bottom: none;
         }
         
-        /* Print Styles */
+        /* Print Styles - CORRIGIDAS */
         @media print {
             body {
-                background: white;
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             .sidebar,
             .btn,
-            .question-controls {
+            .question-controls,
+            .logo-controls,
+            .file-input-label {
                 display: none !important;
             }
             
             .main-content {
-                padding: 0;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
             }
             
             .preview-container {
-                box-shadow: none;
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 100% !important;
             }
             
             .a4-preview {
-                width: 210mm;
-                min-height: 297mm;
-                box-shadow: none;
-                page-break-after: avoid;
+                width: 210mm !important;
+                min-height: 297mm !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 15mm !important;
+                transform: none !important;
+                font-size: 12pt !important;
+            }
+            
+            .exam-header {
+                margin-bottom: 1rem !important;
+            }
+            
+            .logo-container {
+                width: 80px !important;
+                height: 80px !important;
+            }
+            
+            .header-info {
+                font-size: 11pt !important;
+            }
+            
+            .exam-title {
+                font-size: 14pt !important;
+                margin: 1rem 0 !important;
+            }
+            
+            .question-item {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            .questions-container.two-columns {
+                display: block !important;
+            }
+            
+            .questions-container.two-columns .question-item {
+                margin-bottom: 1rem !important;
+            }
+        }
+
+        /* Responsividade Melhorada */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                max-height: none;
+                width: 100%;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .a4-preview {
+                width: 100%;
+                min-height: auto;
+                padding: 1rem;
+            }
+            
+            .exam-header {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .logo-container {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto;
+            }
+            
+            .header-info {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .questions-container.two-columns {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                padding: 1rem;
+            }
+            
+            .main-content {
+                padding: 0.5rem;
+            }
+            
+            .question-list-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .logo-controls {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -593,11 +717,12 @@
                     <label class="input-label">Logo (imagem)</label>
                     <input type="file" id="logoInput" accept="image/*">
                     <label for="logoInput" class="file-input-label">Escolher Logo</label>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">Tamanho da Logo: <span id="logoSizeLabel">80</span>px</label>
-                    <input type="range" id="logoSizeInput" min="40" max="120" value="80">
+                    
+                    <div class="logo-controls">
+                        <label class="input-label">Tamanho da Logo:</label>
+                        <input type="number" id="logoSizeInput" class="logo-size-input" min="50" max="200" value="100" onchange="updateLogoSize(this.value)">
+                        <span style="font-size: 0.75rem; color: rgb(var(--text-secondary));">px</span>
+                    </div>
                 </div>
                 
                 <div class="input-group">
@@ -690,8 +815,8 @@
                     <button class="btn btn-success btn-block" onclick="generatePDF()">
                         📄 Gerar PDF
                     </button>
-                    <button class="btn btn-secondary btn-block" onclick="runVisualAutoFit()">
-                        🔧 Ajuste Visual
+                    <button class="btn btn-secondary btn-block" onclick="autoFit()">
+                        🔧 Ajuste Automático
                     </button>
                     <button class="btn btn-secondary btn-block" onclick="clearAll()">
                         🗑️ Limpar Tudo
@@ -711,7 +836,7 @@
             <div class="preview-container">
                 <div class="a4-preview" id="examPreview">
                     <!-- Header -->
-                    <div class="exam-header" id="examHeaderPreview">
+                    <div class="exam-header">
                         <div class="logo-container" id="logoPreview">
                             <div class="logo-placeholder">Logo</div>
                         </div>
@@ -769,7 +894,7 @@
         
         let examData = {
             logo: null,
-            logoSize: 80, // <-- NOVO: Tamanho da logo
+            logoSize: 100,
             school: '',
             teacher: '',
             student: '_________________________________',
@@ -805,10 +930,6 @@
                 const saved = localStorage.getItem('examData');
                 if (saved) {
                     examData = JSON.parse(saved);
-                    // Garante que dados antigos tenham o logoSize
-                    if (!examData.logoSize) {
-                        examData.logoSize = 80;
-                    }
                     populateInputsFromData();
                 }
             } catch (e) {
@@ -824,10 +945,7 @@
             document.getElementById('gradeInput').value = examData.grade || '';
             document.getElementById('dateInput').value = examData.date || '';
             document.getElementById('titleInput').value = examData.title || 'AVALIAÇÃO';
-            
-            // NOVO: Popula o slider da logo
-            document.getElementById('logoSizeInput').value = examData.logoSize || 80;
-            document.getElementById('logoSizeLabel').textContent = examData.logoSize || 80;
+            document.getElementById('logoSizeInput').value = examData.logoSize || 100;
         }
         
         function setDefaultDate() {
@@ -845,17 +963,6 @@
         function initializeInputListeners() {
             // Logo upload
             document.getElementById('logoInput').addEventListener('change', handleLogoUpload);
-
-            // NOVO: Logo size slider
-            const logoSizeInput = document.getElementById('logoSizeInput');
-            const logoSizeLabel = document.getElementById('logoSizeLabel');
-            logoSizeInput.addEventListener('input', () => {
-                const newSize = logoSizeInput.value;
-                logoSizeLabel.textContent = newSize;
-                examData.logoSize = parseInt(newSize);
-                updatePreview();
-                saveToStorage();
-            });
             
             // Text inputs
             const inputs = ['school', 'teacher', 'student', 'subject', 'grade', 'date', 'title'];
@@ -895,6 +1002,12 @@
             }
         }
         
+        function updateLogoSize(size) {
+            examData.logoSize = parseInt(size) || 100;
+            updatePreview();
+            saveToStorage();
+        }
+        
         // ========================================
         // QUESTIONS MANAGEMENT
         // ========================================
@@ -904,8 +1017,7 @@
             const lines = textarea.value.split('\n').filter(line => line.trim() !== '');
             
             if (lines.length === 0) {
-                // Não use alert, use um modal customizado se precisar (mas aqui vamos só pular)
-                console.warn('Nenhuma questão para adicionar');
+                alert('Por favor, digite ou cole as questões (uma por linha)');
                 return;
             }
             
@@ -929,7 +1041,7 @@
             const text = textarea.value.trim();
             
             if (!text) {
-                console.warn('Nenhum texto de questão para adicionar');
+                alert('Por favor, digite o enunciado da questão');
                 return;
             }
             
@@ -1042,16 +1154,8 @@
             
             // Update logo
             const logoContainer = document.getElementById('logoPreview');
-            const logoSize = examData.logoSize || 80;
-            logoContainer.style.width = `${logoSize}px`;
-            logoContainer.style.height = `${logoSize}px`;
-            
-            // Ajusta o grid do header
-            const examHeader = document.getElementById('examHeaderPreview');
-            examHeader.style.gridTemplateColumns = `${logoSize}px 1fr`;
-
             if (examData.logo) {
-                logoContainer.innerHTML = `<img src="${examData.logo}" alt="Logo">`;
+                logoContainer.innerHTML = `<img src="${examData.logo}" alt="Logo" style="width: ${examData.logoSize}px; height: ${examData.logoSize}px;">`;
             } else {
                 logoContainer.innerHTML = '<div class="logo-placeholder">Logo</div>';
             }
@@ -1102,36 +1206,31 @@
         }
         
         // ========================================
-        // AUTO-FIT ALGORITHM (REATORADO)
+        // AUTO-FIT ALGORITHM
         // ========================================
-
-        // NOVO: Wrapper para o botão de ajuste visual
-        function runVisualAutoFit() {
-             // Mostra o diagnóstico se o checkbox estiver marcado
-            const showDiag = document.getElementById('showDiagnostic').checked;
-            if (showDiag) {
-                document.getElementById('diagnosticContainer').style.display = 'block';
-            }
-            autoFit(document.getElementById('examPreview'));
-        }
-
+        
         /**
-         * Algoritmo de ajuste automático.
-         * AGORA ACEITA UM ELEMENTO COMO ALVO (elementToFit)
+         * Algoritmo de ajuste automático para garantir que todo o conteúdo caiba em 1 página A4
+         * * Ordem de tentativas:
+         * 1. Layout de 1 coluna com tamanhos padrão
+         * 2. Layout de 2 colunas
+         * 3. Redução de fonte (até mínimo de 9pt)
+         * 4. Redução de espaçamento de linhas
+         * 5. Aplicação de scale CSS (último recurso)
          */
-        function autoFit(elementToFit) {
-            const preview = elementToFit; // <-- Alvo agora é o elemento passado
-            const questionsContainer = preview.querySelector('#questionsPreview');
+        function autoFit() {
+            const preview = document.getElementById('examPreview');
+            const questionsContainer = document.getElementById('questionsPreview');
             
-            // A4 dimensions: 210mm x 297mm with 12mm padding = 186mm x 273mm printable area
+            // A4 dimensions: 210mm x 297mm with 15mm padding = 180mm x 267mm printable area
             const A4_WIDTH_MM = 210;
             const A4_HEIGHT_MM = 297;
-            const PADDING_MM = 12;
-            const PRINTABLE_HEIGHT_MM = A4_HEIGHT_MM - (PADDING_MM * 2); // 273mm
+            const PADDING_MM = 15;
+            const PRINTABLE_HEIGHT_MM = A4_HEIGHT_MM - (PADDING_MM * 2); // 267mm
             
             // Convert to pixels (assuming 96 DPI: 1mm ≈ 3.7795px)
             const MM_TO_PX = 3.7795;
-            const PRINTABLE_HEIGHT_PX = PRINTABLE_HEIGHT_MM * MM_TO_PX; // ~1032px
+            const PRINTABLE_HEIGHT_PX = PRINTABLE_HEIGHT_MM * MM_TO_PX; // ~1010px
             
             const diagnosticLog = [];
             
@@ -1144,35 +1243,28 @@
             questionItems.forEach(item => {
                 item.style.fontSize = '';
             });
-
-            // Resetar linhas de resposta
-            const answerLinesReset = preview.querySelectorAll('.answer-line');
-            answerLinesReset.forEach(line => {
-                line.style.height = '';
-                line.style.marginBottom = '';
-            });
             
             // Step 1: Try 1 column layout
             diagnosticLog.push('Etapa 1: Testando layout de 1 coluna...');
             let currentHeight = preview.scrollHeight;
-            diagnosticLog.push(`  Altura atual: ${currentHeight}px | Limite: ${PRINTABLE_HEIGHT_PX.toFixed(0)}px`);
+            diagnosticLog.push(`  Altura atual: ${currentHeight}px | Limite: ${PRINTABLE_HEIGHT_PX}px`);
             
             if (currentHeight <= PRINTABLE_HEIGHT_PX) {
                 diagnosticLog.push('  ✓ Conteúdo cabe em 1 coluna!');
                 showDiagnostic(diagnosticLog);
-                return; // Ajuste concluído
+                return;
             }
             
             // Step 2: Try 2 columns
             diagnosticLog.push('Etapa 2: Testando layout de 2 colunas...');
             questionsContainer.classList.add('two-columns');
             currentHeight = preview.scrollHeight;
-            diagnosticLog.push(`  Altura atual: ${currentHeight}px | Limite: ${PRINTABLE_HEIGHT_PX.toFixed(0)}px`);
+            diagnosticLog.push(`  Altura atual: ${currentHeight}px | Limite: ${PRINTABLE_HEIGHT_PX}px`);
             
             if (currentHeight <= PRINTABLE_HEIGHT_PX) {
                 diagnosticLog.push('  ✓ Conteúdo cabe em 2 colunas!');
                 showDiagnostic(diagnosticLog);
-                return; // Ajuste concluído
+                return;
             }
             
             // Step 3: Reduce font size
@@ -1190,7 +1282,7 @@
                 if (currentHeight <= PRINTABLE_HEIGHT_PX) {
                     diagnosticLog.push(`  ✓ Conteúdo cabe com fonte de ${currentFontSize}px!`);
                     showDiagnostic(diagnosticLog);
-                    return; // Ajuste concluído
+                    return;
                 }
             }
             
@@ -1208,7 +1300,7 @@
             if (currentHeight <= PRINTABLE_HEIGHT_PX) {
                 diagnosticLog.push('  ✓ Conteúdo cabe após redução de espaçamento!');
                 showDiagnostic(diagnosticLog);
-                return; // Ajuste concluído
+                return;
             }
             
             // Step 5: Apply CSS scale (last resort)
@@ -1233,94 +1325,88 @@
             if (showDiag) {
                 container.style.display = 'block';
                 logEl.innerHTML = log.map(line => `<div class="diagnostic-log-item">${line}</div>`).join('');
-                logEl.scrollTop = logEl.scrollHeight; // Auto-scroll
             } else {
                 container.style.display = 'none';
             }
         }
         
         // ========================================
-        // PDF GENERATION (REATORADO)
+        // PDF GENERATION
         // ========================================
         
         async function generatePDF() {
             if (examData.questions.length === 0) {
-                console.warn('Adicione pelo menos uma questão antes de gerar o PDF!');
+                alert('Adicione pelo menos uma questão antes de gerar o PDF!');
                 return;
             }
             
+            // Show loading overlay
             document.getElementById('loadingOverlay').classList.add('active');
             
-             // Mostra o diagnóstico se o checkbox estiver marcado
-            const showDiag = document.getElementById('showDiagnostic').checked;
-            if (showDiag) {
-                document.getElementById('diagnosticContainer').style.display = 'block';
-            }
-            
             try {
-                // 1. Pega o elemento original e reseta o transform SÓ PARA A CLONAGEM
-                const preview = document.getElementById('examPreview');
-                const originalTransform = preview.style.transform;
-                preview.style.transform = 'scale(1)';
+                // Apply auto-fit before generating
+                autoFit();
                 
-                // Espera um frame para garantir que o reset foi aplicado antes de clonar
-                await new Promise(resolve => setTimeout(resolve, 50)); 
-
-                // 2. Clona o elemento "limpo" (escala 1)
+                // Wait a bit for rendering
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Clone the preview element
+                const preview = document.getElementById('examPreview');
                 const clone = preview.cloneNode(true);
                 
-                // 3. Restaura a transformação original no preview visual
-                preview.style.transform = originalTransform;
-
-                // 4. Cria o container temporário para o clone
+                // Remove contenteditable from clone
+                clone.querySelectorAll('[contenteditable]').forEach(el => {
+                    el.removeAttribute('contenteditable');
+                });
+                
+                // Create temporary container
                 const tempContainer = document.createElement('div');
                 tempContainer.style.position = 'fixed';
-                tempContainer.style.left = '-9999px'; // Fora da tela
+                tempContainer.style.left = '-9999px';
                 tempContainer.style.top = '0';
                 tempContainer.style.width = '210mm';
                 tempContainer.style.minHeight = '297mm';
                 tempContainer.appendChild(clone);
                 document.body.appendChild(tempContainer);
                 
-                // 5. RODA O ALGORITMO DE AJUSTE *APENAS NO CLONE*
-                autoFit(clone);
-                
-                // Espera um pouco para o autoFit (com scale) ser aplicado no clone
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // 6. Configurações do PDF
+                // PDF options - CORRIGIDAS para impressão correta
                 const opt = {
-                    margin: 0, // A margem já está no .a4-preview (padding: 12mm)
+                    margin: [10, 10, 10, 10], // Margens adequadas
                     filename: 'prova.pdf',
-                    image: { type: 'jpeg', quality: 0.98 },
+                    image: { 
+                        type: 'jpeg', 
+                        quality: 1.0 // Máxima qualidade
+                    },
                     html2canvas: { 
-                        scale: 2, // Boa resolução
+                        scale: 3, // Aumentado para melhor qualidade
                         useCORS: true,
                         logging: false,
-                        letterRendering: true
+                        letterRendering: true,
+                        width: 794, // Largura A4 em pixels
+                        height: 1123 // Altura A4 em pixels
                     },
                     jsPDF: { 
                         unit: 'mm', 
                         format: 'a4', 
-                        orientation: 'portrait' 
+                        orientation: 'portrait',
+                        compress: false // Desativar compressão para melhor qualidade
                     },
                     pagebreak: { mode: 'avoid-all' }
                 };
                 
-                // 7. Gera o PDF a partir do *clone ajustado*
+                // Generate PDF
                 await html2pdf().set(opt).from(clone).save();
                 
-                // 8. Limpa o container temporário
+                // Clean up
                 document.body.removeChild(tempContainer);
+                
+                // Hide loading overlay
+                document.getElementById('loadingOverlay').classList.remove('active');
                 
             } catch (error) {
                 console.error('Error generating PDF:', error);
-            } finally {
-                // Esconde o overlay
+                alert('Erro ao gerar PDF. Por favor, tente novamente.');
                 document.getElementById('loadingOverlay').classList.remove('active');
-                 if (!showDiag) { // Esconde o log se não estava marcado
-                    document.getElementById('diagnosticContainer').style.display = 'none';
-                 }
             }
         }
         
@@ -1329,14 +1415,10 @@
         // ========================================
         
         function clearAll() {
-            // Usando um modal customizado simples em vez de confirm()
-            // (idealmente, isso seria um modal mais bonito)
-            const confirmed = confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.');
-
-            if (confirmed) {
+            if (confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
                 examData = {
                     logo: null,
-                    logoSize: 80,
+                    logoSize: 100,
                     school: '',
                     teacher: '',
                     student: '_________________________________',
@@ -1352,26 +1434,11 @@
                 updatePreview();
                 updateQuestionsList();
                 setDefaultDate();
-
-                // Reseta o ajuste visual
-                const preview = document.getElementById('examPreview');
-                preview.style.transform = 'scale(1)';
-                preview.style.fontSize = '';
-                preview.querySelector('#questionsPreview').classList.remove('two-columns');
             }
         }
         
         // Listen for answer key checkbox change
         document.getElementById('showAnswerKey').addEventListener('change', updatePreview);
-
-        // Esconde o log de diagnóstico se o checkbox for desmarcado
-        document.getElementById('showDiagnostic').addEventListener('change', (e) => {
-            if (!e.target.checked) {
-                document.getElementById('diagnosticContainer').style.display = 'none';
-            }
-        });
-
     </script>
 </body>
 </html>
-
