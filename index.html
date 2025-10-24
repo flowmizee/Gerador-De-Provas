@@ -41,15 +41,28 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* Classes utilitárias para o PDF */
+        /* ==================================
+         AJUSTES DE COMPACTAÇÃO (Change 4)
+         ==================================
+        */
         .pdf-page {
             width: 210mm; /* A4 width */
             min-height: 297mm; /* A4 height */
-            padding: 15mm; /* AJUSTE: Reduzido de 20mm */
+            padding: 10mm; /* AJUSTE: Ultra-compacto (era 15mm) */
             margin: 1rem auto;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             background: white;
-            font-size: 10pt; /* AJUSTE: Definido tamanho de fonte base menor */
+            font-size: 9pt; /* AJUSTE: Ultra-compacto (era 10pt) */
+            line-height: 1.3; /* AJUSTE: Linhas mais próximas */
+        }
+        
+        /* ==================================
+         AJUSTE FONTES CABEÇALHO (Change 1)
+         ==================================
+        */
+        .header-info {
+            font-size: 11pt; /* Aumenta a fonte do cabeçalho */
+            line-height: 1.4; /* Espaçamento ligeiramente maior para legibilidade */
         }
         
         .dark .pdf-page {
@@ -64,9 +77,9 @@
         /* Linhas de resposta */
         .response-line {
             width: 100%;
-            height: 1.4em; /* AJUSTE: Ligeiramente menor */
+            height: 1.2em; /* AJUSTE: Ultra-compacto (era 1.4em) */
             border-bottom: 1px solid #9ca3af; /* gray-400 */
-            margin-top: 0.2rem; /* AJUSTE: Reduzido */
+            margin-top: 0.1rem; /* AJUSTE: Ultra-compacto (era 0.2rem) */
         }
         
         .dark .response-line {
@@ -104,11 +117,11 @@
         .pdf-footer {
             display: none; /* Oculto por padrão */
             position: absolute;
-            bottom: 5mm; /* AJUSTE: Reduzido de 10mm */
-            left: 15mm; /* AJUSTE: Alinhado com novo padding */
-            right: 15mm; /* AJUSTE: Alinhado com novo padding */
+            bottom: 2mm; /* AJUSTE: Ultra-compacto (era 5mm) */
+            left: 10mm; /* AJUSTE: Alinhado com novo padding */
+            right: 10mm; /* AJUSTE: Alinhado com novo padding */
             text-align: center;
-            font-size: 8pt; /* AJUSTE: Reduzido de 0.75rem */
+            font-size: 8pt; 
             color: #6b7280; /* gray-500 */
         }
 
@@ -284,39 +297,39 @@
                 
                 <!-- 
                   ==================================
-                  AJUSTE DO CABEÇALHO (Change 1)
+                  AJUSTE DO CABEÇALHO (Change 2 & 3)
                   ==================================
-                  O div "flex justify-between" foi removido.
-                  O logo e os campos de texto agora estão em fluxo de bloco (vertical).
-                  O "w-1/4" do logo foi removido e "mb-4" foi adicionado.
-                  O grid de texto foi substituído por "space-y-1 text-xs".
+                  Layout "flex-row" com logo à esquerda e infos empilhadas à direita.
                 -->
-                <header id="test-header" class="border-b-2 border-black dark:border-slate-300 pb-4 mb-4">
-                    <!-- Logo -->
-                    <div id="logo-container-preview" class="mb-4">
-                        <img id="logo-img-preview" src="" class="max-h-20 max-w-full" alt="Logo da Escola" style="display: none;">
+                <header id="test-header" class="flex flex-row items-start space-x-4 border-b-2 border-black dark:border-slate-300 pb-3 mb-3">
+                    
+                    <!-- Logo (Esquerda) -->
+                    <div id="logo-container-preview" class="flex-shrink-0">
+                        <img id="logo-img-preview" src="" class="max-h-24 max-w-[150px]" alt="Logo da Escola" style="display: none;">
                     </div>
                     
-                    <!-- Campos do Cabeçalho (Empilhados) -->
-                    <div class="space-y-1 text-xs">
+                    <!-- Campos do Cabeçalho (Direita, Empilhados e Maiores) -->
+                    <!-- Adicionada a classe 'header-info' para fontes maiores (Change 1) -->
+                    <div class="flex-1 space-y-1 header-info"> 
                         <div><strong>Escola:</strong> <span id="preview-school"></span></div>
                         <div><strong>Professor(a):</strong> <span id="preview-teacher"></span></div>
                         <div><strong>Aluno(a):</strong> <span id="preview-student"></span></div>
                         <div><strong>Componente:</strong> <span id="preview-subject"></span></div>
-                        <div class="flex space-x-6"> <!-- Mantém Série e Data na mesma linha para economizar espaço -->
+                        <div class="flex space-x-6">
                             <span><strong>Série/Ano:</strong> <span id="preview-grade"></span></span>
                             <span><strong>Data:</strong> <span id="preview-date"></span></span>
                         </div>
                     </div>
-                    
-                    <!-- Título da Prova -->
-                    <h2 id="test-title-preview" 
-                        contenteditable="true" 
-                        data-placeholder="Título da Avaliação"
-                        class="text-lg font-bold text-center mt-4 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <!-- AJUSTE: text-xl -> text-lg; mt-6 -> mt-4 -->
-                    </h2>
                 </header>
+                
+                <!-- Título da Prova (separado do cabeçalho flex) -->
+                <h2 id="test-title-preview" 
+                    contenteditable="true" 
+                    data-placeholder="Título da Avaliação"
+                    class="text-lg font-bold text-center -mt-1 mb-3 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- AJUSTE: Margens reduzidas -->
+                </h2>
+
 
                 <!-- Lista de Questões -->
                 <section id="question-list-container">
@@ -407,7 +420,6 @@
                 localStorage.setItem('geradorProvasState', JSON.stringify(appState));
             } catch (e) {
                 console.error("Erro ao salvar no LocalStorage:", e);
-                // Poderia notificar o usuário que o salvamento falhou
             }
         }
 
@@ -428,9 +440,6 @@
         // FUNÇÕES DE RENDERIZAÇÃO
         // ===================================
         
-        /**
-         * Renderiza a aplicação inteira baseada no appState
-         */
         function renderApp() {
             // Renderiza Dark Mode
             if (appState.darkMode) {
@@ -477,9 +486,6 @@
             renderQuestions();
         }
 
-        /**
-         * Renderiza a lista de questões
-         */
         function renderQuestions() {
             questionListContainer.innerHTML = ''; // Limpa a lista
             
@@ -500,36 +506,36 @@
         function createQuestionElement(question, index) {
             const div = document.createElement('div');
             
-            // AJUSTE (Change 2): Reduzido padding (p-3) e margem (mb-4)
-            div.className = 'question-card bg-white dark:bg-slate-800 rounded-lg shadow-md p-3 mb-4 relative break-inside-avoid border border-transparent dark:border-slate-700';
+            // AJUSTE (Change 4): Ultra-compacto (p-2, mb-2)
+            div.className = 'question-card bg-white dark:bg-slate-800 rounded-lg shadow-md p-2 mb-2 relative break-inside-avoid border border-transparent dark:border-slate-700';
             div.dataset.id = question.id;
             div.draggable = true;
 
             div.innerHTML = `
                 <!-- Controles da Questão (Topo) -->
-                <div class="question-controls absolute top-2 right-2 flex space-x-1 opacity-25 group-hover:opacity-100 transition-opacity">
+                <div class="question-controls absolute top-1 right-1 flex space-x-1 opacity-25 group-hover:opacity-100 transition-opacity">
                     <!-- Input de Upload de Imagem -->
-                    <label class="cursor-pointer p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-800 text-blue-600 dark:text-blue-400" title="Adicionar Imagem">
+                    <label class="cursor-pointer p-1 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-800 text-blue-600 dark:text-blue-400" title="Adicionar Imagem">
                         <input type="file" accept="image/*" class="hidden question-image-upload" data-id="${question.id}">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     </label>
                     <!-- Botão de Excluir -->
-                    <button class="delete-question-btn p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-800 text-red-600 dark:text-red-400" title="Excluir Questão" data-id="${question.id}">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <button class="delete-question-btn p-1 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-800 text-red-600 dark:text-red-400" title="Excluir Questão" data-id="${question.id}">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                 </div>
                 
-                <div class="flex items-start space-x-3">
+                <div class="flex items-start space-x-2"> <!-- AJUSTE: space-x-3 -> space-x-2 -->
                     <!-- Handle de Arrastar -->
                     <div class="drag-handle cursor-move text-gray-400 dark:text-gray-600 pt-1 opacity-25 group-hover:opacity-100" title="Arraste para reordenar">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
                     </div>
                     
                     <!-- Número e Texto da Questão -->
                     <div class="flex-1">
                         <div class="flex items-start">
                             <span class="font-bold mr-2">${index + 1}.</span>
-                            <div class="question-text flex-1 min-h-[1.5em] p-1 -m-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                            <div class="question-text flex-1 min-h-[1.2em] p-1 -m-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500" 
                                  contenteditable="true" 
                                  data-placeholder="Digite o enunciado da questão..."
                                  data-id="${question.id}">${question.text}</div>
@@ -537,35 +543,35 @@
 
                         <!-- Imagem da Questão (se existir) -->
                         ${question.image ? `
-                            <div class="mt-2 relative group/image"> <!-- AJUSTE: mt-4 -> mt-2 -->
+                            <div class="mt-1 relative group/image"> <!-- AJUSTE: Ultra-compacto (mt-1) -->
                                 <img src="${question.image}" class="question-image max-w-full rounded-md border dark:border-slate-600" style="width: ${question.imageSize}%">
-                                <div class="question-controls absolute top-2 right-2 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center space-x-2 bg-black bg-opacity-50 p-2 rounded-lg">
-                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-                                    <input type="range" min="10" max="120" value="${question.imageSize}" class="image-resize-slider w-32" data-id="${question.id}">
-                                    <button class="remove-image-btn p-1 rounded-full bg-red-600 text-white hover:bg-red-700" data-id="${question.id}" title="Remover Imagem">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                <div class="question-controls absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center space-x-1 bg-black bg-opacity-50 p-1 rounded-lg">
+                                    <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                                    <input type="range" min="10" max="120" value="${question.imageSize}" class="image-resize-slider w-24" data-id="${question.id}">
+                                    <button class="remove-image-btn p-0.5 rounded-full bg-red-600 text-white hover:bg-red-700" data-id="${question.id}" title="Remover Imagem">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
                             </div>
                         ` : ''}
 
                         <!-- Linhas de Resposta -->
-                        <div class="response-lines-container mt-2" data-id="${question.id}"> <!-- AJUSTE: mt-4 -> mt-2 -->
+                        <div class="response-lines-container mt-1" data-id="${question.id}"> <!-- AJUSTE: Ultra-compacto (mt-1) -->
                             ${Array(question.lines).fill('<div class="response-line"></div>').join('')}
                         </div>
                         
                         <!-- Slider de Linhas de Resposta -->
-                        <div class="question-controls mt-2 flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400"> <!-- AJUSTE: mt-4 -> mt-2 -->
-                            <label for="lines-slider-${question.id}" class="whitespace-nowrap">Linhas:</label> <!-- Texto reduzido -->
+                        <div class="question-controls mt-1 flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"> <!-- AJUSTE: Ultra-compacto (mt-1, text-xs) -->
+                            <label for="lines-slider-${question.id}" class="whitespace-nowrap">Linhas:</label>
                             <input type="range" id="lines-slider-${question.id}" min="0" max="10" value="${question.lines}" class="lines-slider w-full" data-id="${question.id}">
                             <span class="lines-count font-medium w-6 text-right">${question.lines}</span>
                         </div>
                         
                         <!-- Campo de Gabarito (oculto por padrão) -->
-                        <div class="answer-field mt-2"> <!-- AJUSTE: mt-4 -> mt-2 -->
-                            <label class="block text-sm font-medium text-green-700 dark:text-green-300 mb-1">Resposta (Gabarito):</label>
-                            <textarea class="answer-textarea w-full p-2 rounded-md border border-gray-300 dark:bg-gray-800 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500" 
-                                      rows="3" 
+                        <div class="answer-field mt-1"> <!-- AJUSTE: Ultra-compacto (mt-1) -->
+                            <label class="block text-xs font-medium text-green-700 dark:text-green-300 mb-1">Resposta (Gabarito):</label>
+                            <textarea class="answer-textarea w-full p-1 rounded-md border border-gray-300 dark:bg-gray-800 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm" 
+                                      rows="2" 
                                       placeholder="Digite a resposta esperada..."
                                       data-id="${question.id}">${question.answer || ''}</textarea>
                         </div>
@@ -607,9 +613,6 @@
             }
         }
         
-        /**
-         * Lê um arquivo (imagem) e retorna uma Data URL
-         */
         function readFileAsDataURL(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -878,7 +881,6 @@
                 if (question && question.text !== newText) {
                     question.text = newText;
                     saveState();
-                    // Não precisa re-renderizar, o blur já atualizou o DOM
                 }
             }
         }, true); // Usa captura para garantir que o blur seja pego
@@ -893,7 +895,6 @@
                 draggedItemId = dragTarget.dataset.id;
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', draggedItemId);
-                // Adiciona um timeout para o DOM atualizar antes de aplicar a classe
                 setTimeout(() => {
                     dragTarget.classList.add('dragging');
                 }, 0);
@@ -905,7 +906,6 @@
             if (dragTarget) {
                 dragTarget.classList.remove('dragging');
             }
-            // Limpa o indicador visual
             document.querySelectorAll('.drag-over-indicator').forEach(el => el.remove());
             draggedItemId = null;
             dragOverElement = null;
@@ -917,28 +917,21 @@
             
             const target = e.target.closest('.question-card');
             if (target && target.dataset.id !== draggedItemId) {
-                // Limpa indicadores anteriores
                 document.querySelectorAll('.drag-over-indicator').forEach(el => el.remove());
-                
-                // Cria e insere o indicador
                 const indicator = document.createElement('div');
                 indicator.className = 'drag-over-indicator';
                 target.parentNode.insertBefore(indicator, target);
-                
-                dragOverElement = target; // Armazena sobre quem estamos
+                dragOverElement = target; 
             } else if (!target) {
-                // Se estiver arrastando sobre o container mas fora de um card
-                // (por exemplo, no espaço vazio no final)
                 document.querySelectorAll('.drag-over-indicator').forEach(el => el.remove());
                 const indicator = document.createElement('div');
                 indicator.className = 'drag-over-indicator';
                 questionListContainer.appendChild(indicator);
-                dragOverElement = null; // Indica que vamos adicionar no final
+                dragOverElement = null; 
             }
         });
         
         questionListContainer.addEventListener('dragleave', (e) => {
-            // Se saiu do container, limpa os indicadores
             if (!questionListContainer.contains(e.relatedTarget)) {
                 document.querySelectorAll('.drag-over-indicator').forEach(el => el.remove());
                 dragOverElement = null;
@@ -958,17 +951,15 @@
             const [droppedQuestion] = appState.questions.splice(droppedIndex, 1);
             
             if(dragOverElement) {
-                // Soltou sobre outro card
                 const targetId = dragOverElement.dataset.id;
                 const targetIndex = appState.questions.findIndex(q => q.id === targetId);
                 appState.questions.splice(targetIndex, 0, droppedQuestion);
             } else {
-                // Soltou no final da lista
                 appState.questions.push(droppedQuestion);
             }
 
             saveState();
-            renderQuestions(); // Re-renderiza tudo com a nova ordem
+            renderQuestions(); 
         });
 
 
@@ -979,7 +970,6 @@
             const filename = `Prova_${appState.title.replace(/ /g, '_')}_${getFormattedDate()}.pdf`;
             const element = document.getElementById('test-preview-area');
             
-            // Adiciona classes temporárias para o modo de geração
             element.classList.add('generating-pdf');
             if(isAnswerKey) {
                 element.classList.add('mode-answer-key');
@@ -996,7 +986,6 @@
             };
 
             try {
-                // Gera o PDF
                 const pdf = await html2pdf().from(element).set(opt).toPdf().get('pdf');
                 
                 // Adiciona rodapé com número de página
@@ -1011,19 +1000,17 @@
                     const text = `${schoolName} - Página ${i} de ${totalPages}`;
                     const textWidth = pdf.getStringUnitWidth(text) * pdf.internal.getFontSize() / pdf.internal.scaleFactor;
                     const x = (pdf.internal.pageSize.width - textWidth) / 2;
-                    const y = pdf.internal.pageSize.height - 7; // AJUSTE: 7mm do fundo (alinhado com 5mm + margem)
+                    const y = pdf.internal.pageSize.height - 7; 
                     
                     pdf.text(text, x, y);
                 }
                 
-                // Salva o PDF com o rodapé
                 pdf.save(filename);
 
             } catch (error) {
                 console.error("Erro ao gerar PDF:", error);
                 alert("Ocorreu um erro ao gerar o PDF.");
             } finally {
-                // Limpa as classes temporárias
                 element.classList.remove('generating-pdf');
                 if(isAnswerKey) {
                     element.classList.remove('mode-answer-key');
@@ -1044,45 +1031,49 @@
                 const filename = `Prova_${appState.title.replace(/ /g, '_')}_${getFormattedDate()}.docx`;
                 
                 // Gerar um HTML simplificado e com estilos inline para o DOCX
-                // html-docx-js não lida bem com Tailwind
                 let contentHtml = `
                     <style>
-                        body { font-family: Arial, sans-serif; font-size: 11pt; }
+                        body { font-family: Arial, sans-serif; font-size: 10pt; }
                         h2 { text-align: center; font-size: 14pt; font-weight: bold; }
-                        p { margin: 0 0 10px 0; }
-                        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
-                        .header-table td { padding: 4px; vertical-align: top; }
-                        .question { margin-bottom: 15px; break-inside: avoid; }
-                        .question-text { }
+                        p { margin: 0 0 5px 0; }
+                        .question { margin-bottom: 8px; break-inside: avoid; } /* AJUSTE: Compacto */
                         .question-image { max-width: 400px; height: auto; }
-                        .response-line-docx { border-bottom: 1px solid #000; height: 1.5em; margin: 4px 0; }
+                        .response-line-docx { border-bottom: 1px solid #000; height: 1.2em; margin: 2px 0; } /* AJUSTE: Compacto */
                         .answer-key { background-color: #f0f0f0; padding: 5px; border: 1px dashed #ccc; margin-top: 5px; }
                     </style>
                     <body>
                 `;
                 
-                // Cabeçalho (AJUSTADO para empilhado)
+                // Cabeçalho (AJUSTADO para Tabela, Change 2 & 3)
                 let logoHtml = '';
                 if(appState.logo) {
-                    logoHtml = `<p><img src="${appState.logo}" style="max-height: 80px; width: auto;"></p>`;
+                    logoHtml = `<img src="${appState.logo}" style="max-height: 80px; width: auto;">`;
                 }
 
                 contentHtml += `
-                    ${logoHtml}
-                    <p><strong>Escola:</strong> ${appState.header.school}</p>
-                    <p><strong>Professor(a):</strong> ${appState.header.teacher}</p>
-                    <p><strong>Aluno(a):</strong> ${appState.header.student}</p>
-                    <p><strong>Componente:</strong> ${appState.header.subject}</p>
-                    <p><strong>Série/Ano:</strong> ${appState.header.grade} &nbsp;&nbsp;&Oslash; <strong>Data:</strong> ${appState.header.date}</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                        <tr>
+                            <td style="width: 30%; vertical-align: top;">
+                                ${logoHtml}
+                            </td>
+                            <td style="width: 70%; vertical-align: top; font-size: 12pt;">
+                                <p><strong>Escola:</strong> ${appState.header.school}</p>
+                                <p><strong>Professor(a):</strong> ${appState.header.teacher}</p>
+                                <p><strong>Aluno(a):</strong> ${appState.header.student}</p>
+                                <p><strong>Componente:</strong> ${appState.header.subject}</p>
+                                <p><strong>Série/Ano:</strong> ${appState.header.grade} &nbsp;&nbsp;&nbsp; <strong>Data:</strong> ${appState.header.date}</p>
+                            </td>
+                        </tr>
+                    </table>
                     
-                    <h2 style="margin-top: 20px;">${appState.title}</h2>
-                    <hr style="border: 0; border-top: 1px solid #000;">
+                    <h2 style="margin-top: 15px;">${appState.title}</h2>
+                    <hr style="border: 0; border-top: 1px solid #000; margin-bottom: 10px;">
                 `;
                 
                 // Questões
                 appState.questions.forEach((q, index) => {
                     contentHtml += `<div class="question">`;
-                    contentHtml += `<p><strong>${index + 1}.</strong> ${q.text}</p>`; // q.text já é HTML (do contenteditable)
+                    contentHtml += `<p><strong>${index + 1}.</strong> ${q.text}</p>`;
                     
                     if(q.image) {
                         contentHtml += `<p><img src="${q.image}" class="question-image" style="width: ${q.imageSize}%;"></p>`;
@@ -1098,7 +1089,6 @@
 
                 contentHtml += `</body>`;
                 
-                // Converte e salva
                 const converted = htmlDocx.asBlob(contentHtml);
                 saveAs(converted, filename);
 
