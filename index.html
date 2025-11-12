@@ -1,70 +1,269 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Extrator de Negócios Flowmize</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    body { font-family: Arial; margin: 20px; background: #f4f4f4; }
-    input, button { padding: 10px; margin: 5px; }
-    table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    #map { height: 400px; margin-top: 10px; border-radius: 10px; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bridge Extractor — Google Maps → CSV</title>
+<style>
+  :root{--accent:#0b63d6}
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f5f7fb;margin:20px;color:#111}
+  .wrap{max-width:1000px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 8px 30px rgba(12,20,40,0.06)}
+  h1{color:var(--accent);margin:0 0 8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  input,textarea,select{padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px}
+  button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+  button.ghost{background:#eef4ff;color:var(--accent);border:1px solid #dbe9ff}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px;text-align:left}
+  th{background:#f8fbff;color:var(--accent)}
+  .tiny{font-size:13px;color:#666}
+  .note{margin-top:10px;font-size:13px;color:#444}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  pre{background:#f4f6ff;padding:10px;border-radius:8px;overflow:auto}
+</style>
 </head>
 <body>
-  <h2>🌍 Extrator de Negócios Grátis (OpenStreetMap)</h2>
-  <input id="query" type="text" placeholder="Ex: pizzaria São Luís" size="40">
-  <button onclick="buscar()">Buscar</button>
+  <div class="wrap">
+    <h1>Bridge Extractor — Google Maps → CSV (local)</h1>
+    <div class="tiny">Fluxo: abra o Google Maps numa aba e rode o bookmarklet (ou cole o JSON). O app recebe os itens (ou cole do clipboard) e exporta CSV.</div>
 
-  <div id="map"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnPaste">📋 Colar do clipboard / Importar JSON</button>
+      <button id="btnClear" class="ghost">Limpar tabela</button>
+      <button id="btnCSV" class="ghost">Exportar CSV</button>
+      <button id="btnCopy" class="ghost">Copiar CSV</button>
+    </div>
 
-  <table id="resultados">
-    <thead><tr><th>Nome</th><th>Endereço</th><th>Telefone</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="note">
+      <strong>Instruções resumidas:</strong>
+      <ol>
+        <li>Abra o arquivo HTML (este app) em uma aba do navegador.</li>
+        <li>Abra o Google Maps em outra aba, faça sua busca (ex: "lanchonete São Luís").</li>
+        <li>Role a lista lateral para carregar os resultados. Clique no favorito (bookmarklet) que você criou — ele tentará enviar os dados pro app e copiar pro clipboard.</li>
+        <li>Volte ao app e clique <em>Colar do clipboard / Importar JSON</em> (se necessário). Depois exporte CSV.</li>
+      </ol>
+      <div class="tiny">Observação: às vezes é necessário clicar no bookmarklet 2–3 vezes enquanto você rola a lista para coletar mais resultados.</div>
+    </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    let map = L.map('map').setView([-5.1, -42.8], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+    <hr style="margin:14px 0">
 
-    async function buscar() {
-      const termo = document.getElementById("query").value;
-      if (!termo) return alert("Digite algo para pesquisar!");
+    <div class="note"><strong>Recebidos / Itens:</strong></div>
+    <div id="count" class="tiny">0 itens</div>
 
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(termo)}`;
-      const resp = await fetch(url);
-      const data = await resp.json();
-      if (!data.length) return alert("Nenhum resultado encontrado.");
+    <table id="tbl">
+      <thead><tr><th>#</th><th>Nome</th><th>Telefone</th><th>Endereço</th><th>URL</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
 
-      const { lat, lon } = data[0];
-      map.setView([lat, lon], 14);
+    <div style="margin-top:12px" class="tiny">
+      <strong>Bookmarklet (copiar para favorito):</strong>
+      <div style="margin-top:6px">Crie um favorito no navegador e cole o código do bookmarklet (abaixo) no campo URL do favorito. Nomeie como "Extrair Maps".</div>
+      <pre id="bookmarkletBox" style="white-space:pre-wrap;"></pre>
+    </div>
 
-      const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:5000,${lat},${lon})[name];out;`;
-      const overpassResp = await fetch(overpassUrl);
-      const overpassData = await overpassResp.json();
+    <div style="margin-top:12px" class="note">
+      <strong>Como o envio automático funciona:</strong>
+      <p class="tiny">O bookmarklet tenta usar <code>window.open('','flowmize_receiver')</code> para obter referência pra aba do app (se estiver aberta com mesmo nome) e manda os dados via <code>postMessage</code>. Se não conseguir, copia o JSON pro clipboard e você cola manualmente.</p>
+    </div>
+  </div>
 
-      const tbody = document.querySelector("#resultados tbody");
-      tbody.innerHTML = "";
-      overpassData.elements.forEach(el => {
-        const nome = el.tags.name || "Sem nome";
-        const endereco = el.tags["addr:full"] || el.tags["addr:street"] || "Não informado";
-        const telefone = el.tags.phone || el.tags["contact:phone"] || "Não informado";
+<script>
+// App logic
+const tblBody = document.querySelector('#tbl tbody');
+const countEl = document.getElementById('count');
+let items = [];
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${nome}</td><td>${endereco}</td><td>${telefone}</td>`;
-        tbody.appendChild(tr);
+function render(){
+  tblBody.innerHTML = '';
+  items.forEach((it, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td>
+      <td>${escapeHtml(it.name||'')}</td>
+      <td>${escapeHtml(it.phone||'')}</td>
+      <td>${escapeHtml(it.address||'')}</td>
+      <td>${it.url?(`<a href="${escapeHtml(it.url)}" target="_blank">link</a>`):''}</td>
+      <td><button data-i="${i}" class="rm">Remover</button></td>`;
+    tblBody.appendChild(tr);
+  });
+  Array.from(document.querySelectorAll('.rm')).forEach(b=> b.onclick = ()=>{ items.splice(+b.dataset.i,1); render(); });
+  countEl.textContent = `${items.length} itens`;
+}
 
-        if (el.lat && el.lon) {
-          L.marker([el.lat, el.lon])
-            .addTo(map)
-            .bindPopup(`<b>${nome}</b><br>${endereco}<br>${telefone}`);
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// receive postMessage from bookmarklet
+window.addEventListener('message', (ev) => {
+  try {
+    // Ev.source may be maps tab. We accept any origin but check shape
+    const data = ev.data;
+    if(!data) return;
+    if(Array.isArray(data)) {
+      // array of items
+      data.forEach(d => items.push(normalize(d)));
+      render();
+      alert('Dados recebidos via postMessage: ' + data.length + ' itens.');
+    } else if (data && data.type === 'maps_extracted' && Array.isArray(data.items)){
+      data.items.forEach(d => items.push(normalize(d)));
+      render();
+      alert('Dados recebidos via postMessage: ' + data.items.length + ' itens.');
+    }
+  } catch(e){ console.error(e); }
+}, false);
+
+function normalize(d){
+  return {
+    name: d.name || d.title || d.nome || '',
+    phone: d.phone || d.telefone || d.telephony || '',
+    address: d.address || d.addr || '',
+    url: d.url || d.link || ''
+  };
+}
+
+// Paste from clipboard (JSON)
+document.getElementById('btnPaste').onclick = async () => {
+  try {
+    const txt = await navigator.clipboard.readText();
+    if(!txt) { alert('Clipboard vazio — copie o JSON do bookmarklet ou cole manualmente.'); return; }
+    let parsed;
+    try { parsed = JSON.parse(txt); } catch(e){
+      // attempt to parse as lines like "name | phone | address"
+      const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+      parsed = lines.map(l=>{
+        const parts = l.split(/\s*\|\s*/);
+        return { name: parts[0]||'', phone: parts[1]||'', address: parts[2]||'', url: parts[3]||'' };
+      });
+    }
+    if(Array.isArray(parsed)) {
+      parsed.forEach(p => items.push(normalize(p)));
+      render();
+      alert('Importado do clipboard: ' + parsed.length + ' itens.');
+    } else if(parsed && parsed.items && Array.isArray(parsed.items)){
+      parsed.items.forEach(p => items.push(normalize(p)));
+      render();
+      alert('Importado do clipboard: ' + parsed.items.length + ' itens.');
+    } else {
+      alert('Formato inválido. O clipboard deve conter um JSON array de objetos.');
+    }
+  } catch(err){
+    alert('Falha ao ler clipboard: ' + err.message);
+  }
+};
+
+document.getElementById('btnClear').onclick = ()=>{ if(confirm('Limpar todos os itens?')) { items=[]; render(); } };
+
+function downloadCSV(){
+  if(!items.length) { alert('Sem dados.'); return; }
+  const header = ['Nome','Telefone','Endereço','URL'];
+  const rows = items.map(it => [it.name||'', it.phone||'', it.address||'', it.url||'']);
+  let csv = header.join(',') + '\n' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'maps_export.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+document.getElementById('btnCSV').onclick = downloadCSV;
+document.getElementById('btnCopy').onclick = async ()=>{
+  if(!items.length) { alert('Sem dados.'); return; }
+  const header = ['Nome','Telefone','Endereço','URL'];
+  const rows = items.map(it => [it.name||'', it.phone||'', it.address||'', it.url||'']);
+  let csv = header.join(',') + '\n' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  try {
+    await navigator.clipboard.writeText(csv);
+    alert('CSV copiado para área de transferência.');
+  } catch(e){ alert('Não foi possível copiar automaticamente.'); }
+};
+
+// expose function to programmatically add items (optional)
+window.__addItems = function(arr){ if(Array.isArray(arr)){ arr.forEach(a=> items.push(normalize(a))); render(); } };
+
+// prepare bookmarklet code (display for copy)
+const bookmarkletCode = `(function(){try{
+  // heuristics to collect visible result cards on Google Maps
+  function textOf(el){ return el?el.innerText.trim():'';
+  }
+  function findCards(){
+    // try common selectors
+    const selectors = [
+      '[data-result-id]', // some versions
+      '.Nv2PK', // old listing card
+      'div[role="article"]',
+      '.section-result', // legacy
+      '[data-local-results-count]' // fallback
+    ];
+    const found = new Set();
+    const cards = [];
+    selectors.forEach(sel=>{
+      document.querySelectorAll(sel).forEach(el=>{
+        if(!found.has(el)){
+          found.add(el); cards.push(el);
+        }
+      });
+    });
+    // as final fallback, try list items in side panel
+    if(cards.length===0){
+      document.querySelectorAll('div').forEach(d=>{
+        if(d && d.innerText && /\\n/.test(d.innerText) && d.innerText.length<800 && d.innerText.length>10){
+          // candidate
+          cards.push(d);
         }
       });
     }
-  </script>
+    return cards;
+  }
+
+  function extractFromCard(el){
+    // try to find name
+    let name = (el.querySelector('h3')||el.querySelector('h1')||el.querySelector('[role="heading"]')||el.querySelector('a')||el.querySelector('span'))?.innerText;
+    name = name ? name.trim() : '';
+    // phone
+    let phone = '';
+    const tel = el.querySelector('a[href^="tel:"]') || Array.from(el.querySelectorAll('a,span,div')).find(n=>/\\+?\\d[\\d\\s().-]{6,}\\d/.test(n.innerText || ''));
+    if(tel){
+      const m = (tel.getAttribute && tel.getAttribute('href') && tel.getAttribute('href').startsWith('tel:')) ? tel.getAttribute('href').replace('tel:','') : (tel.innerText||'');
+      phone = (m||'').trim();
+    }
+    // address - try common address fields
+    let address = '';
+    const addrEl = el.querySelector('[data-item-id="address"]') || Array.from(el.querySelectorAll('span,div')).find(n=>/\\d+\\s+/.test(n.innerText||'') && (n.innerText.length<120));
+    if(addrEl) address = (addrEl.innerText||'').trim();
+    // url - try anchor
+    let url = '';
+    const a = el.querySelector('a[href*="/place/"], a[href^="http"]');
+    if(a) url = a.href;
+    return { name: name||'', phone: phone||'', address: address||'', url: url||'' };
+  }
+
+  const cards = findCards();
+  const items = [];
+  cards.forEach(c=>{
+    try{
+      const it = extractFromCard(c);
+      if(it.name) items.push(it);
+    }catch(e){}
+  });
+
+  // uniq by name+address
+  const seen = new Set(), uniq = [];
+  items.forEach(i=>{
+    const k = (i.name||'') + '||' + (i.address||'');
+    if(!seen.has(k)){ seen.add(k); uniq.push(i); }
+  });
+
+  // try to open receiver window (name: flowmize_receiver)
+  var receiver = window.open('','flowmize_receiver');
+  if(receiver && !receiver.closed){
+    try{ receiver.postMessage({type:'maps_extracted', items:uniq}, '*'); }catch(e){}
+  }
+  // copy JSON to clipboard as fallback
+  var json = JSON.stringify(uniq);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(json).then(function(){ alert('Dados copiados ('+uniq.length+' itens). Volte ao app e cole (Ctrl+V) se necessário.'); }, function(){ prompt('Copie os dados abaixo:', json); });
+  } else {
+    prompt('Copie os dados abaixo:', json);
+  }
+}catch(e){ alert('Erro no extractor: '+e.message); }})();`;
+
+// show it for user
+document.getElementById('bookmarkletBox').textContent = bookmarkletCode;
+
+</script>
 </body>
 </html>
