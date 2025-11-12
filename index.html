@@ -1,1300 +1,324 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Provas - Página Única A4</title>
-    
-    <!-- 
-    ╔══════════════════════════════════════════════════════════════════════════════╗
-    ║  GERADOR DE PROVAS - README                                                  ║
-    ╠══════════════════════════════════════════════════════════════════════════════╣
-    ║  Como usar:                                                                  ║
-    ║  1. Preencha o cabeçalho (escola, professor, componente, etc.)               ║
-    ║  2. Cole questões (uma por linha) ou adicione manually                       ║
-    ║  3. Ajuste linhas de resposta e adicione imagens se necessário               ║
-    ║  4. Clique "Gerar PDF" - o sistema automaticamente ajusta para 1 página      ║
-    ║                                                                              ║
-    ║  Testes:                                                                     ║
-    ║  - Teste 1: Cole 10 linhas, defina 4 linhas cada → deve gerar 1 página       ║
-    ║  - Teste 2: Adicione imagens → devem aparecer corretamente                   ║
-    ║  - Teste 3: Use texto longo → algoritmo ajusta automaticamente               ║
-    ║  - Teste 4: Ative gabarito → mostra respostas preenchidas                    ║
-    ║                                                                              ║
-    ║  Ajustes: Modifique minFontSize (linha ~850) e margins (linha ~890)          ║
-    ╚══════════════════════════════════════════════════════════════════════════════╝
-    -->
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        :root {
-            --primary: 37 99 235;
-            --primary-dark: 29 78 216;
-            --secondary: 71 85 105;
-            --background: 248 250 252;
-            --surface: 255 255 255;
-            --border: 226 232 240;
-            --text-primary: 15 23 42;
-            --text-secondary: 71 85 105;
-            --success: 34 197 94;
-            --warning: 251 146 60;
-            --danger: 239 68 68;
-            
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: rgb(var(--background));
-            color: rgb(var(--text-primary));
-            line-height: 1.6;
-        }
-        
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-            flex-direction: column;
-        }
-        
-        @media (min-width: 1024px) {
-            .app-container {
-                flex-direction: row;
-            }
-        }
-        
-        /* Sidebar */
-        .sidebar {
-            width: 100%;
-            background: rgb(var(--surface));
-            border-right: 1px solid rgb(var(--border));
-            padding: 1.5rem;
-            overflow-y: auto;
-            max-height: 40vh;
-        }
-        
-        @media (min-width: 1024px) {
-            .sidebar {
-                width: 400px;
-                max-height: 100vh;
-            }
-        }
-        
-        .sidebar h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: rgb(var(--primary));
-            margin-bottom: 0.5rem;
-        }
-        
-        .sidebar p {
-            font-size: 0.875rem;
-            color: rgb(var(--text-secondary));
-            margin-bottom: 1.5rem;
-        }
-        
-        .section {
-            margin-bottom: 1.5rem;
-        }
-        
-        .section-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: rgb(var(--text-primary));
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-        
-        .input-group {
-            margin-bottom: 0.75rem;
-        }
-        
-        .input-label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: rgb(var(--text-secondary));
-            margin-bottom: 0.25rem;
-        }
-        
-        input[type="text"],
-        input[type="date"],
-        textarea {
-            width: 100%;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            border: 1px solid rgb(var(--border));
-            border-radius: 0.375rem;
-            transition: all var(--transition);
-            background: rgb(var(--surface));
-        }
-        
-        input[type="text"]:focus,
-        input[type="date"]:focus,
-        textarea:focus {
-            outline: none;
-            border-color: rgb(var(--primary));
-            box-shadow: 0 0 0 3px rgb(var(--primary) / 0.1);
-        }
-        
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-        }
-        
-        .btn {
-            padding: 0.625rem 1rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border-radius: 0.375rem;
-            border: none;
-            cursor: pointer;
-            transition: all var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            justify-content: center;
-        }
-        
-        .btn-primary {
-            background: rgb(var(--primary));
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: rgb(var(--primary-dark));
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .btn-secondary {
-            background: rgb(var(--secondary));
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: rgb(51 65 85);
-        }
-        
-        .btn-success {
-            background: rgb(var(--success));
-            color: white;
-        }
-        
-        .btn-success:hover {
-            background: rgb(22 163 74);
-        }
-        
-        .btn-danger {
-            background: rgb(var(--danger));
-            color: white;
-            padding: 0.375rem 0.625rem;
-            font-size: 0.75rem;
-        }
-        
-        .btn-danger:hover {
-            background: rgb(220 38 38);
-        }
-        
-        .btn-block {
-            width: 100%;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            padding: 2rem;
-            overflow-y: auto;
-            background: rgb(var(--background));
-        }
-        
-        .preview-container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: rgb(var(--surface));
-            box-shadow: var(--shadow-lg);
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-        
-        /* A4 Preview */
-        .a4-preview {
-            width: 210mm;
-            min-height: 297mm;
-            background: white;
-            margin: 0 auto;
-            padding: 12mm;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            transform-origin: top center;
-        }
-        
-        @media (max-width: 900px) {
-            .a4-preview {
-                width: 100%;
-                min-height: auto;
-                padding: 1rem;
-            }
-        }
-        
-        /* Header */
-        .exam-header {
-            display: grid;
-            grid-template-columns: 80px 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid rgb(var(--text-primary));
-        }
-        
-        .logo-container {
-            width: 80px;
-            height: 80px;
-            border: 2px dashed rgb(var(--border));
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: rgb(var(--background));
-        }
-        
-        .logo-container img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        
-        .logo-placeholder {
-            font-size: 0.75rem;
-            color: rgb(var(--text-secondary));
-            text-align: center;
-        }
-        
-        .header-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-        }
-        
-        .header-field {
-            padding: 0.25rem;
-        }
-        
-        .header-field strong {
-            color: rgb(var(--text-primary));
-        }
-        
-        [contenteditable="true"] {
-            outline: 1px dashed transparent;
-            transition: outline var(--transition);
-            padding: 0.125rem;
-            border-radius: 0.25rem;
-        }
-        
-        [contenteditable="true"]:hover {
-            outline-color: rgb(var(--primary) / 0.3);
-            background: rgb(var(--background) / 0.5);
-        }
-        
-        [contenteditable="true"]:focus {
-            outline-color: rgb(var(--primary));
-            background: rgb(var(--primary) / 0.05);
-        }
-        
-        .exam-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            color: rgb(var(--text-primary));
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        /* Questions */
-        .questions-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .questions-container.two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-        
-        .question-item {
-            background: white;
-            border: 1px solid rgb(var(--border));
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            cursor: move;
-            transition: all var(--transition);
-        }
-        
-        .question-item:hover {
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .question-item.dragging {
-            opacity: 0.5;
-        }
-        
-        .question-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-        
-        .question-number {
-            font-weight: 700;
-            color: rgb(var(--primary));
-        }
-        
-        .question-controls {
-            display: flex;
-            gap: 0.25rem;
-        }
-        
-        .question-text {
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 0.5rem;
-            color: rgb(var(--text-primary));
-        }
-        
-        .question-image {
-            max-width: 100%;
-            height: auto;
-            margin: 0.5rem 0;
-            border-radius: 0.25rem;
-            border: 1px solid rgb(var(--border));
-        }
-        
-        .answer-lines {
-            margin-top: 0.5rem;
-        }
-        
-        .answer-line {
-            border-bottom: 1px solid rgb(var(--text-secondary));
-            height: 1.5rem;
-            margin-bottom: 0.25rem;
-        }
-        
-        /* Question Editor */
-        .question-editor {
-            background: rgb(var(--surface));
-            border: 1px solid rgb(var(--border));
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .question-list-item {
-            background: white;
-            border: 1px solid rgb(var(--border));
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .question-list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-        
-        .question-list-number {
-            font-weight: 600;
-            color: rgb(var(--primary));
-        }
-        
-        .question-list-text {
-            font-size: 0.875rem;
-            color: rgb(var(--text-primary));
-            margin-bottom: 0.5rem;
-        }
-        
-        .question-list-controls {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .inline-input {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            border: 1px solid rgb(var(--border));
-            border-radius: 0.25rem;
-            width: 60px;
-        }
-        
-        .file-input-label {
-            padding: 0.375rem 0.625rem;
-            font-size: 0.75rem;
-            background: rgb(var(--secondary));
-            color: white;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-        
-        .file-input-label:hover {
-            background: rgb(51 65 85);
-        }
-        
-        input[type="file"] {
-            display: none;
-        }
-        
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity var(--transition);
-        }
-        
-        .loading-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-        
-        .loading-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            text-align: center;
-            max-width: 400px;
-        }
-        
-        .spinner {
-            border: 4px solid rgb(var(--border));
-            border-top: 4px solid rgb(var(--primary));
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        input[type="checkbox"] {
-            width: 1rem;
-            height: 1rem;
-            cursor: pointer;
-        }
-        
-        .diagnostic-log {
-            background: rgb(var(--background));
-            border: 1px solid rgb(var(--border));
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            font-size: 0.75rem;
-            font-family: 'Courier New', monospace;
-            color: rgb(var(--text-secondary));
-            margin-top: 1rem;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        .diagnostic-log-item {
-            padding: 0.25rem 0;
-            border-bottom: 1px solid rgb(var(--border));
-        }
-        
-        .diagnostic-log-item:last-child {
-            border-bottom: none;
-        }
-        
-        /* Print Styles */
-        @media print {
-            body {
-                background: white;
-            }
-            
-            .sidebar,
-            .btn,
-            .question-controls {
-                display: none !important;
-            }
-            
-            .main-content {
-                padding: 0;
-            }
-            
-            .preview-container {
-                box-shadow: none;
-            }
-            
-            .a4-preview {
-                width: 210mm;
-                min-height: 297mm;
-                box-shadow: none;
-                page-break-after: avoid;
-            }
-        }
-    </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OSM Business Extractor — Grátis (OpenStreetMap + Overpass)</title>
+<!-- Leaflet CSS (map) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-sA+e2k2GTV6pVb5QmKkGkqQ2V0q3bQm3f5f9gQJg3qo=" crossorigin=""/>
+<style>
+  :root{--accent:#0b63d6}
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f5f7fb;margin:0;padding:18px;color:#122}
+  .wrap{max-width:1100px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 8px 30px rgba(12,20,40,0.06)}
+  h1{margin:0;font-size:20px;color:var(--accent)}
+  p.lead{margin:6px 0 16px;color:#444}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  input[type="text"], select {padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px}
+  button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+  button.ghost{background:#eef4ff;color:var(--accent);border:1px solid #dbe9ff}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  #map{height:420px;border-radius:8px;border:1px solid #e6eefc;margin-top:12px}
+  #results{margin-top:12px;max-height:320px;overflow:auto;border-radius:8px;border:1px solid #eee;padding:8px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:13px}
+  th{background:#f8fbff;color:#0b63d6}
+  .tiny{font-size:12px;color:#666}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .badge{background:#e8f2ff;color:var(--accent);padding:6px 10px;border-radius:999px;font-size:12px}
+  a.small{font-size:13px;color:var(--accent);text-decoration:none}
+</style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <h1>📝 Gerador de Provas</h1>
-            <p>Configure o cabeçalho e adicione questões</p>
-            
-            <!-- Header Configuration -->
-            <div class="section">
-                <div class="section-title">Cabeçalho</div>
-                
-                <div class="input-group">
-                    <label class="input-label">Logo (imagem)</label>
-                    <input type="file" id="logoInput" accept="image/*">
-                    <label for="logoInput" class="file-input-label">Escolher Logo</label>
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Escola</label>
-                    <input type="text" id="schoolInput" placeholder="Nome da Escola">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Professor(a)</label>
-                    <input type="text" id="teacherInput" placeholder="Nome do Professor">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Aluno(a)</label>
-                    <input type="text" id="studentInput" placeholder="Nome do Aluno" value="_________________________________">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Componente Curricular</label>
-                    <input type="text" id="subjectInput" placeholder="Ex: Matemática">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Série/Turma</label>
-                    <input type="text" id="gradeInput" placeholder="Ex: 9º Ano A">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Data</label>
-                    <input type="date" id="dateInput">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Título da Prova</label>
-                    <input type="text" id="titleInput" placeholder="Ex: Avaliação Bimestral" value="AVALIAÇÃO">
-                </div>
-            </div>
-            
-            <!-- Questions Configuration -->
-            <div class="section">
-                <div class="section-title">Questões</div>
-                
-                <div class="input-group">
-                    <label class="input-label">Colar Questões (uma por linha)</label>
-                    <textarea id="bulkQuestionsInput" placeholder="Digite ou cole as questões aqui, uma por linha..."></textarea>
-                </div>
-                
-                <button class="btn btn-secondary btn-block" onclick="addBulkQuestions()">
-                    ➕ Adicionar Questões em Lote
-                </button>
-                
-                <div style="margin: 1rem 0; text-align: center; color: rgb(var(--text-secondary)); font-size: 0.875rem;">
-                    — ou —
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Adicionar Questão Individual</label>
-                    <textarea id="singleQuestionInput" placeholder="Digite o enunciado da questão..."></textarea>
-                </div>
-                
-                <button class="btn btn-secondary btn-block" onclick="addSingleQuestion()">
-                    ➕ Adicionar Questão
-                </button>
-            </div>
-            
-            <!-- Questions List Editor -->
-            <div class="section">
-                <div class="section-title">Questões Adicionadas (<span id="questionCount">0</span>)</div>
-                <div id="questionsList"></div>
-            </div>
-            
-            <!-- Options -->
-            <div class="section">
-                <div class="section-title">Opções</div>
-                
-                <div class="checkbox-group">
-                    <input type="checkbox" id="showAnswerKey">
-                    <label for="showAnswerKey" class="input-label" style="margin: 0;">Modo Gabarito (preencher respostas)</label>
-                </div>
-                
-                <div class="checkbox-group">
-                    <input type="checkbox" id="showDiagnostic">
-                    <label for="showDiagnostic" class="input-label" style="margin: 0;">Mostrar diagnóstico de ajuste</label>
-                </div>
-            </div>
-            
-            <!-- Actions -->
-            <div class="section">
-                <div class="btn-group">
-                    <button class="btn btn-success btn-block" onclick="generatePDF()">
-                        📄 Gerar PDF
-                    </button>
-                    <button class="btn btn-secondary btn-block" onclick="autoFit()">
-                        🔧 Ajuste Automático
-                    </button>
-                    <button class="btn btn-secondary btn-block" onclick="clearAll()">
-                        🗑️ Limpar Tudo
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Diagnostic Log -->
-            <div id="diagnosticContainer" style="display: none;">
-                <div class="section-title" style="margin-top: 1rem;">Diagnóstico</div>
-                <div id="diagnosticLog" class="diagnostic-log"></div>
-            </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="preview-container">
-                <div class="a4-preview" id="examPreview">
-                    <!-- Header -->
-                    <div class="exam-header">
-                        <div class="logo-container" id="logoPreview">
-                            <div class="logo-placeholder">Logo</div>
-                        </div>
-                        <div class="header-info">
-                            <div class="header-field">
-                                <strong>Escola:</strong> <span contenteditable="true" id="schoolPreview">Nome da Escola</span>
-                            </div>
-                            <div class="header-field">
-                                <strong>Aluno(a):</strong> <span contenteditable="true" id="studentPreview">_________________________________</span>
-                            </div>
-                            <div class="header-field">
-                                <strong>Professor(a):</strong> <span contenteditable="true" id="teacherPreview">Nome do Professor</span>
-                            </div>
-                            <div class="header-field">
-                                <strong>Série/Turma:</strong> <span contenteditable="true" id="gradePreview">9º Ano</span>
-                            </div>
-                            <div class="header-field">
-                                <strong>Componente:</strong> <span contenteditable="true" id="subjectPreview">Componente Curricular</span>
-                            </div>
-                            <div class="header-field">
-                                <strong>Data:</strong> <span contenteditable="true" id="datePreview">__/__/____</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Title -->
-                    <div class="exam-title" contenteditable="true" id="titlePreview">
-                        AVALIAÇÃO
-                    </div>
-                    
-                    <!-- Questions -->
-                    <div class="questions-container" id="questionsPreview">
-                        <div style="text-align: center; color: rgb(var(--text-secondary)); padding: 2rem;">
-                            Adicione questões usando o painel lateral →
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-    
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <h3>Gerando PDF...</h3>
-            <p>Por favor aguarde enquanto ajustamos o layout e criamos seu arquivo.</p>
+  <div class="wrap">
+    <h1>OSM Business Extractor — 100% grátis</h1>
+    <p class="lead">Pesquise por segmento + cidade e extraia negócios do OpenStreetMap (via Overpass). Sem API key. Resultados: nome, telefone, website, endereço quando disponíveis.</p>
+
+    <div class="row">
+      <div style="flex:1;min-width:220px">
+        <label class="tiny">1) Segmento (ex: pizzaria, padaria, bar, hairdresser)</label><br>
+        <input id="q" type="text" placeholder="Ex: pizzaria, padaria, bar" value="pizzaria">
+      </div>
+      <div style="width:260px">
+        <label class="tiny">2) Cidade / local (ex: São Luís, MA)</label><br>
+        <input id="city" type="text" placeholder="Ex: São Luís, MA" value="São Luís, MA">
+      </div>
+      <div style="width:160px">
+        <label class="tiny">3) Raio (metros)</label><br>
+        <input id="radius" type="text" value="5000" placeholder="5000">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label class="tiny">&nbsp;</label>
+        <div class="controls">
+          <button id="btnSearch">🔎 Buscar</button>
+          <button id="btnClear" class="ghost">Limpar</button>
         </div>
+      </div>
     </div>
-    
-    <script>
-        // ========================================
-        // STATE MANAGEMENT
-        // ========================================
-        
-        let examData = {
-            logo: null,
-            school: '',
-            teacher: '',
-            student: '_________________________________',
-            subject: '',
-            grade: '',
-            date: '',
-            title: 'AVALIAÇÃO',
-            questions: []
-        };
-        
-        // Load from localStorage on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            loadFromStorage();
-            updatePreview();
-            initializeInputListeners();
-            setDefaultDate();
-        });
-        
-        // ========================================
-        // STORAGE FUNCTIONS
-        // ========================================
-        
-        function saveToStorage() {
-            try {
-                localStorage.setItem('examData', JSON.stringify(examData));
-            } catch (e) {
-                console.error('Error saving to localStorage:', e);
-            }
+
+    <div class="actions">
+      <div class="badge" id="status">Pronto</div>
+      <div class="tiny" style="margin-left:8px">Use com responsabilidade — limite requisições e espere entre buscas.</div>
+      <div style="margin-left:auto" class="tiny">Favor ler: <a class="small" href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank">Nominatim policy</a></div>
+    </div>
+
+    <div id="map"></div>
+
+    <div style="display:flex;gap:12px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <div class="tiny">Resultados</div>
+        <div id="results"><em class="tiny">Ainda não buscou.</em></div>
+      </div>
+      <div style="width:220px">
+        <div class="tiny">Exportar</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button id="btnCSV">Exportar CSV</button>
+          <button id="btnCopy" class="ghost">Copiar CSV</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="btnGeoJSON" class="ghost">Baixar GeoJSON</button>
+          <button id="btnCopyJSON" class="ghost">Copiar JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="tiny" style="margin-top:12px">Observações: Nominatim e Overpass são gratuitos mas limitados. Se der erro 429, espere alguns minutos. Nem todo objeto tem telefone/website; buscamos nos campos <code>phone</code>, <code>contact:phone</code> e <code>website</code>.</p>
+  </div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+ integrity="sha256-o9N1j7kB7g1k1Qf2kqV8g6nQ0s3wY1p0s9p3h2gQ3k0=" crossorigin=""></script>
+
+<script>
+/*
+  OSM Business Extractor
+  - Geocodifica a cidade com Nominatim
+  - Busca nodes/ways/relations via Overpass API dentro de raio
+  - Extrai: name, phone, contact:phone, website, addr:*
+  - Exporta CSV e GeoJSON
+  - Gratuito (OpenStreetMap)
+*/
+
+const map = L.map('map').setView([-2.53,-44.3], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+let markersLayer = L.layerGroup().addTo(map);
+
+const status = id('status');
+const resultsDiv = id('results');
+
+let lastFeatures = []; // GeoJSON features
+
+document.getElementById('btnSearch').addEventListener('click', doSearch);
+document.getElementById('btnClear').addEventListener('click', ()=>{ clearAll(); });
+document.getElementById('btnCSV').addEventListener('click', ()=> downloadCSV());
+document.getElementById('btnCopy').addEventListener('click', ()=> copyCSV());
+document.getElementById('btnGeoJSON').addEventListener('click', ()=> downloadGeoJSON());
+document.getElementById('btnCopyJSON').addEventListener('click', ()=> copyJSON());
+
+function id(v){ return document.getElementById(v); }
+
+async function doSearch(){
+  const query = id('q').value.trim();
+  const city = id('city').value.trim();
+  const radius = parseInt(id('radius').value.trim()) || 5000;
+  if(!query || !city){ alert('Preencha segmento e cidade.'); return; }
+
+  setStatus('Geocodificando cidade...');
+  try{
+    // Nominatim search
+    const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`;
+    const nomRes = await fetch(nomUrl, {headers:{ 'Accept':'application/json' }});
+    if(!nomRes.ok) throw new Error('Erro na geocodificação: ' + nomRes.status);
+    const nomJson = await nomRes.json();
+    if(!nomJson || !nomJson.length) { setStatus('Cidade não encontrada'); alert('Cidade não encontrada pelo Nominatim. Tente mudar o texto.'); return; }
+    const place = nomJson[0];
+    const lat = parseFloat(place.lat), lon = parseFloat(place.lon);
+    map.setView([lat,lon], Math.max(12, Math.round(10 - Math.log(radius)/Math.log(2))));
+    setStatus(`Buscando "${query}" em ${city} (raio ${radius}m)...`);
+    // build Overpass query: search nodes/ways/relations with name and amenity/shop/tourism/office etc matching the term OR tag equals query
+    const term = query.toLowerCase();
+    // We'll attempt matching with name~term OR (amenity~term OR shop~term OR tourism~term OR office~term)
+    const overpassQ = `[out:json][timeout:60];
+(
+  node(around:${radius},${lat},${lon})[name~"${escapeRegex(term)}",i];
+  way(around:${radius},${lat},${lon})[name~"${escapeRegex(term)}",i];
+  relation(around:${radius},${lat},${lon})[name~"${escapeRegex(term)}",i];
+  node(around:${radius},${lat},${lon})[amenity~"${escapeRegex(term)}",i];
+  way(around:${radius},${lat},${lon})[amenity~"${escapeRegex(term)}",i];
+  relation(around:${radius},${lat},${lon})[amenity~"${escapeRegex(term)}",i];
+  node(around:${radius},${lat},${lon})[shop~"${escapeRegex(term)}",i];
+  way(around:${radius},${lat},${lon})[shop~"${escapeRegex(term)}",i];
+  relation(around:${radius},${lat},${lon})[shop~"${escapeRegex(term)}",i];
+  node(around:${radius},${lat},${lon})[tourism~"${escapeRegex(term)}",i];
+  way(around:${radius},${lat},${lon})[tourism~"${escapeRegex(term)}",i];
+  relation(around:${radius},${lat},${lon})[tourism~"${escapeRegex(term)}",i];
+);
+out center meta;`;
+
+    // POST to Overpass
+    setStatus('Consultando Overpass (pode demorar alguns segundos)...');
+    const ovRes = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+      body: 'data=' + encodeURIComponent(overpassQ)
+    });
+    if(!ovRes.ok) throw new Error('Overpass error: ' + ovRes.status);
+    const ovJson = await ovRes.json();
+    // parse elements
+    const elems = ovJson.elements || [];
+    if(!elems.length){ setStatus('Nenhum resultado encontrado.'); resultsDiv.innerHTML='<em class="tiny">Nenhum resultado.</em>'; lastFeatures=[]; markersLayer.clearLayers(); return; }
+
+    // map elements to GeoJSON features
+    const feats = elems.map(el => {
+      let lat = el.lat, lon = el.lon;
+      if(!lat && el.center){ lat = el.center.lat; lon = el.center.lon; }
+      const tags = el.tags || {};
+      const name = tags.name || '';
+      const phone = tags.phone || tags['contact:phone'] || tags['telephone'] || '';
+      const website = tags.website || tags['contact:website'] || '';
+      const addr = buildAddress(tags);
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [parseFloat(lon), parseFloat(lat)] },
+        properties: {
+          id: el.id,
+          osm_type: el.type,
+          name, phone, website, addr, tags
         }
-        
-        function loadFromStorage() {
-            try {
-                const saved = localStorage.getItem('examData');
-                if (saved) {
-                    examData = JSON.parse(saved);
-                    populateInputsFromData();
-                }
-            } catch (e) {
-                console.error('Error loading from localStorage:', e);
-            }
-        }
-        
-        function populateInputsFromData() {
-            document.getElementById('schoolInput').value = examData.school || '';
-            document.getElementById('teacherInput').value = examData.teacher || '';
-            document.getElementById('studentInput').value = examData.student || '_________________________________';
-            document.getElementById('subjectInput').value = examData.subject || '';
-            document.getElementById('gradeInput').value = examData.grade || '';
-            document.getElementById('dateInput').value = examData.date || '';
-            document.getElementById('titleInput').value = examData.title || 'AVALIAÇÃO';
-        }
-        
-        function setDefaultDate() {
-            if (!examData.date) {
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('dateInput').value = today;
-                examData.date = today;
-            }
-        }
-        
-        // ========================================
-        // INPUT LISTENERS
-        // ========================================
-        
-        function initializeInputListeners() {
-            // Logo upload
-            document.getElementById('logoInput').addEventListener('change', handleLogoUpload);
-            
-            // Text inputs
-            const inputs = ['school', 'teacher', 'student', 'subject', 'grade', 'date', 'title'];
-            inputs.forEach(field => {
-                const input = document.getElementById(field + 'Input');
-                input.addEventListener('input', () => {
-                    examData[field] = input.value;
-                    updatePreview();
-                    saveToStorage();
-                });
-            });
-            
-            // Contenteditable sync
-            const editables = ['school', 'teacher', 'student', 'subject', 'grade', 'date', 'title'];
-            editables.forEach(field => {
-                const el = document.getElementById(field + 'Preview');
-                if (el) {
-                    el.addEventListener('input', () => {
-                        examData[field] = el.textContent;
-                        document.getElementById(field + 'Input').value = el.textContent;
-                        saveToStorage();
-                    });
-                }
-            });
-        }
-        
-        function handleLogoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    examData.logo = e.target.result;
-                    updatePreview();
-                    saveToStorage();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-        
-        // ========================================
-        // QUESTIONS MANAGEMENT
-        // ========================================
-        
-        function addBulkQuestions() {
-            const textarea = document.getElementById('bulkQuestionsInput');
-            const lines = textarea.value.split('\n').filter(line => line.trim() !== '');
-            
-            if (lines.length === 0) {
-                alert('Por favor, digite ou cole as questões (uma por linha)');
-                return;
-            }
-            
-            lines.forEach(line => {
-                examData.questions.push({
-                    id: Date.now() + Math.random(),
-                    text: line.trim(),
-                    lines: 4,
-                    image: null
-                });
-            });
-            
-            textarea.value = '';
-            updatePreview();
-            updateQuestionsList();
-            saveToStorage();
-        }
-        
-        function addSingleQuestion() {
-            const textarea = document.getElementById('singleQuestionInput');
-            const text = textarea.value.trim();
-            
-            if (!text) {
-                alert('Por favor, digite o enunciado da questão');
-                return;
-            }
-            
-            examData.questions.push({
-                id: Date.now(),
-                text: text,
-                lines: 4,
-                image: null
-            });
-            
-            textarea.value = '';
-            updatePreview();
-            updateQuestionsList();
-            saveToStorage();
-        }
-        
-        function updateQuestionLines(id, lines) {
-            const question = examData.questions.find(q => q.id === id);
-            if (question) {
-                question.lines = parseInt(lines) || 0;
-                updatePreview();
-                saveToStorage();
-            }
-        }
-        
-        function uploadQuestionImage(id, event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const question = examData.questions.find(q => q.id === id);
-                    if (question) {
-                        question.image = e.target.result;
-                        updatePreview();
-                        updateQuestionsList();
-                        saveToStorage();
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-        
-        function removeQuestionImage(id) {
-            const question = examData.questions.find(q => q.id === id);
-            if (question) {
-                question.image = null;
-                updatePreview();
-                updateQuestionsList();
-                saveToStorage();
-            }
-        }
-        
-        function removeQuestion(id) {
-            examData.questions = examData.questions.filter(q => q.id !== id);
-            updatePreview();
-            updateQuestionsList();
-            saveToStorage();
-        }
-        
-        function updateQuestionsList() {
-            const container = document.getElementById('questionsList');
-            const countEl = document.getElementById('questionCount');
-            
-            countEl.textContent = examData.questions.length;
-            
-            if (examData.questions.length === 0) {
-                container.innerHTML = '<p style="color: rgb(var(--text-secondary)); font-size: 0.875rem;">Nenhuma questão adicionada</p>';
-                return;
-            }
-            
-            container.innerHTML = examData.questions.map((q, index) => `
-                <div class="question-list-item">
-                    <div class="question-list-header">
-                        <span class="question-list-number">${index + 1}.</span>
-                        <button class="btn btn-danger" onclick="removeQuestion(${q.id})">✕</button>
-                    </div>
-                    <div class="question-list-text">${q.text}</div>
-                    ${q.image ? '<div style="color: rgb(var(--success)); font-size: 0.75rem;">✓ Imagem anexada</div>' : ''}
-                    <div class="question-list-controls">
-                        <label style="font-size: 0.75rem; color: rgb(var(--text-secondary));">
-                            Linhas:
-                            <input type="number" class="inline-input" min="0" max="6" value="${q.lines}" 
-                                   onchange="updateQuestionLines(${q.id}, this.value)">
-                        </label>
-                        
-                        <input type="file" id="img-${q.id}" accept="image/*" onchange="uploadQuestionImage(${q.id}, event)">
-                        <label for="img-${q.id}" class="file-input-label">
-                            ${q.image ? '🖼️ Alterar Imagem' : '📎 Adicionar Imagem'}
-                        </label>
-                        
-                        ${q.image ? `<button class="btn btn-danger" onclick="removeQuestionImage(${q.id})">Remover Img</button>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // ========================================
-        // PREVIEW UPDATE
-        // ========================================
-        
-        function updatePreview() {
-            // Update header
-            document.getElementById('schoolPreview').textContent = examData.school || 'Nome da Escola';
-            document.getElementById('teacherPreview').textContent = examData.teacher || 'Nome do Professor';
-            document.getElementById('studentPreview').textContent = examData.student || '_________________________________';
-            document.getElementById('subjectPreview').textContent = examData.subject || 'Componente Curricular';
-            document.getElementById('gradePreview').textContent = examData.grade || '9º Ano';
-            document.getElementById('datePreview').textContent = examData.date ? formatDate(examData.date) : '__/__/____';
-            document.getElementById('titlePreview').textContent = examData.title || 'AVALIAÇÃO';
-            
-            // Update logo
-            const logoContainer = document.getElementById('logoPreview');
-            if (examData.logo) {
-                logoContainer.innerHTML = `<img src="${examData.logo}" alt="Logo">`;
-            } else {
-                logoContainer.innerHTML = '<div class="logo-placeholder">Logo</div>';
-            }
-            
-            // Update questions
-            const questionsContainer = document.getElementById('questionsPreview');
-            
-            if (examData.questions.length === 0) {
-                questionsContainer.innerHTML = '<div style="text-align: center; color: rgb(var(--text-secondary)); padding: 2rem;">Adicione questões usando o painel lateral →</div>';
-                return;
-            }
-            
-            const showAnswerKey = document.getElementById('showAnswerKey').checked;
-            
-            questionsContainer.innerHTML = examData.questions.map((q, index) => `
-                <div class="question-item">
-                    <div class="question-number">${index + 1})</div>
-                    <div class="question-text">${q.text}</div>
-                    ${q.image ? `<img src="${q.image}" alt="Questão ${index + 1}" class="question-image">` : ''}
-                    <div class="answer-lines">
-                        ${generateAnswerLines(q.lines, showAnswerKey)}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function generateAnswerLines(count, filled = false) {
-            if (count === 0) return '';
-            
-            let html = '';
-            for (let i = 0; i < count; i++) {
-                if (filled) {
-                    html += `<div class="answer-line" style="color: rgb(var(--text-secondary)); font-size: 0.875rem; padding-top: 0.25rem;">Resposta exemplo linha ${i + 1}</div>`;
-                } else {
-                    html += '<div class="answer-line"></div>';
-                }
-            }
-            return html;
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '__/__/____';
-            const date = new Date(dateStr + 'T00:00:00');
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        }
-        
-        // ========================================
-        // AUTO-FIT ALGORITHM
-        // ========================================
-        
-        /**
-         * Algoritmo de ajuste automático para garantir que todo o conteúdo caiba em 1 página A4
-         * * Ordem de tentativas:
-         * 1. Layout de 1 coluna com tamanhos padrão
-         * 2. Layout de 2 colunas
-         * 3. Redução de fonte (até mínimo de 9pt)
-         * 4. Redução de espaçamento de linhas
-         * 5. Aplicação de scale CSS (último recurso)
-         */
-        function autoFit() {
-            const preview = document.getElementById('examPreview');
-            const questionsContainer = document.getElementById('questionsPreview');
-            
-            // A4 dimensions: 210mm x 297mm with 12mm padding = 186mm x 273mm printable area
-            const A4_WIDTH_MM = 210;
-            const A4_HEIGHT_MM = 297;
-            const PADDING_MM = 12;
-            const PRINTABLE_HEIGHT_MM = A4_HEIGHT_MM - (PADDING_MM * 2); // 273mm
-            
-            // Convert to pixels (assuming 96 DPI: 1mm ≈ 3.7795px)
-            const MM_TO_PX = 3.7795;
-            const PRINTABLE_HEIGHT_PX = PRINTABLE_HEIGHT_MM * MM_TO_PX; // ~1032px
-            
-            const diagnosticLog = [];
-            
-            // Reset any previous adjustments
-            preview.style.transform = 'scale(1)';
-            questionsContainer.classList.remove('two-columns');
-            preview.style.fontSize = '';
-            
-            const questionItems = preview.querySelectorAll('.question-item');
-            questionItems.forEach(item => {
-                item.style.fontSize = '';
-            });
-            
-            // Step 1: Try 1 column layout
-            diagnosticLog.push('Etapa 1: Testando layout de 1 coluna...');
-            let currentHeight = preview.scrollHeight;
-            diagnosticLog.push(`  Altura atual: ${currentHeight}px | Limite: ${PRINTABLE_HEIGHT_PX}px`);
-            
-            if (currentHeight <= PRINTABLE_HEIGHT_PX) {
-                diagnosticLog.push('  ✓ Conteúdo cabe em 1 coluna!');
-                showDiagnostic(diagnosticLog);
-                return;
-            }
-            
-            // Step 2: Try 2 columns
-            diagnosticLog.push('Etapa 2: Testando layout de 2 colunas...');
-            questionsContainer.classList.add('two-columns');
-            currentHeight = preview.scrollHeight;
-            diagnosticLog.push(`  Altura atual: ${currentHeight}px | Limite: ${PRINTABLE_HEIGHT_PX}px`);
-            
-            if (currentHeight <= PRINTABLE_HEIGHT_PX) {
-                diagnosticLog.push('  ✓ Conteúdo cabe em 2 colunas!');
-                showDiagnostic(diagnosticLog);
-                return;
-            }
-            
-            // Step 3: Reduce font size
-            diagnosticLog.push('Etapa 3: Reduzindo tamanho da fonte...');
-            const minFontSize = 9; // pt
-            const defaultFontSize = 16; // px
-            let currentFontSize = defaultFontSize;
-            
-            while (currentFontSize >= minFontSize && currentHeight > PRINTABLE_HEIGHT_PX) {
-                currentFontSize -= 0.5;
-                preview.style.fontSize = currentFontSize + 'px';
-                currentHeight = preview.scrollHeight;
-                diagnosticLog.push(`  Fonte: ${currentFontSize}px | Altura: ${currentHeight}px`);
-                
-                if (currentHeight <= PRINTABLE_HEIGHT_PX) {
-                    diagnosticLog.push(`  ✓ Conteúdo cabe com fonte de ${currentFontSize}px!`);
-                    showDiagnostic(diagnosticLog);
-                    return;
-                }
-            }
-            
-            // Step 4: Reduce line spacing
-            diagnosticLog.push('Etapa 4: Reduzindo espaçamento...');
-            const answerLines = preview.querySelectorAll('.answer-line');
-            answerLines.forEach(line => {
-                line.style.height = '1.2rem';
-                line.style.marginBottom = '0.15rem';
-            });
-            
-            currentHeight = preview.scrollHeight;
-            diagnosticLog.push(`  Altura após redução de espaçamento: ${currentHeight}px`);
-            
-            if (currentHeight <= PRINTABLE_HEIGHT_PX) {
-                diagnosticLog.push('  ✓ Conteúdo cabe após redução de espaçamento!');
-                showDiagnostic(diagnosticLog);
-                return;
-            }
-            
-            // Step 5: Apply CSS scale (last resort)
-            diagnosticLog.push('Etapa 5: Aplicando escala CSS (último recurso)...');
-            const scaleFactor = PRINTABLE_HEIGHT_PX / currentHeight;
-            const finalScale = Math.min(scaleFactor * 0.98, 1); // 98% to add safety margin
-            
-            preview.style.transform = `scale(${finalScale})`;
-            preview.style.transformOrigin = 'top center';
-            
-            diagnosticLog.push(`  Escala aplicada: ${(finalScale * 100).toFixed(1)}%`);
-            diagnosticLog.push('  ✓ Ajuste concluído!');
-            
-            showDiagnostic(diagnosticLog);
-        }
-        
-        function showDiagnostic(log) {
-            const showDiag = document.getElementById('showDiagnostic').checked;
-            const container = document.getElementById('diagnosticContainer');
-            const logEl = document.getElementById('diagnosticLog');
-            
-            if (showDiag) {
-                container.style.display = 'block';
-                logEl.innerHTML = log.map(line => `<div class="diagnostic-log-item">${line}</div>`).join('');
-            } else {
-                container.style.display = 'none';
-            }
-        }
-        
-        // ========================================
-        // PDF GENERATION
-        // ========================================
-        
-        async function generatePDF() {
-            if (examData.questions.length === 0) {
-                alert('Adicione pelo menos uma questão antes de gerar o PDF!');
-                return;
-            }
-            
-            // Show loading overlay
-            document.getElementById('loadingOverlay').classList.add('active');
-            
-            try {
-                // Apply auto-fit before generating
-                autoFit();
-                
-                // Wait a bit for rendering
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Clone the preview element
-                const preview = document.getElementById('examPreview');
-                const clone = preview.cloneNode(true);
-                
-                // Remove contenteditable from clone
-                clone.querySelectorAll('[contenteditable]').forEach(el => {
-                    el.removeAttribute('contenteditable');
-                });
-                
-                // Create temporary container
-                const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'fixed';
-                tempContainer.style.left = '-9999px';
-                tempContainer.style.top = '0';
-                tempContainer.style.width = '210mm';
-                tempContainer.style.minHeight = '297mm';
-                tempContainer.appendChild(clone);
-                document.body.appendChild(tempContainer);
-                
-                // PDF options
-                const opt = {
-                    margin: [5, 5, 5, 5], // Small margins in mm
-                    filename: 'prova.pdf',
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { 
-                        scale: 2,
-                        useCORS: true,
-                        logging: false,
-                        letterRendering: true
-                    },
-                    jsPDF: { 
-                        unit: 'mm', 
-                        format: 'a4', 
-                        orientation: 'portrait' 
-                    },
-                    pagebreak: { mode: 'avoid-all' }
-                };
-                
-                // Generate PDF
-                await html2pdf().set(opt).from(clone).save();
-                
-                // Clean up
-                document.body.removeChild(tempContainer);
-                
-                // Hide loading overlay
-                document.getElementById('loadingOverlay').classList.remove('active');
-                
-            } catch (error) {
-                console.error('Error generating PDF:', error);
-                alert('Erro ao gerar PDF. Por favor, tente novamente.');
-                document.getElementById('loadingOverlay').classList.remove('active');
-            }
-        }
-        
-        // ========================================
-        // UTILITY FUNCTIONS
-        // ========================================
-        
-        function clearAll() {
-            if (confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
-                examData = {
-                    logo: null,
-                    school: '',
-                    teacher: '',
-                    student: '_________________________________',
-                    subject: '',
-                    grade: '',
-                    date: '',
-                    title: 'AVALIAÇÃO',
-                    questions: []
-                };
-                
-                localStorage.removeItem('examData');
-                populateInputsFromData();
-                updatePreview();
-                updateQuestionsList();
-                setDefaultDate();
-            }
-        }
-        
-        // Listen for answer key checkbox change
-        document.getElementById('showAnswerKey').addEventListener('change', updatePreview);
-    </script>
+      };
+    }).filter(f => f.geometry && f.properties.name);
+
+    lastFeatures = feats;
+    renderResults(feats);
+    setStatus(`Pronto — ${feats.length} resultados mostrados.`);
+  } catch(err){
+    console.error(err);
+    setStatus('Erro: ' + err.message);
+    alert('Erro: ' + err.message);
+  }
+}
+
+function escapeRegex(s){
+  // escape special chars for Overpass regex
+  return String(s).replace(/["\\]/g, '\\$&');
+}
+
+function buildAddress(tags){
+  const parts = [];
+  if(tags['addr:street']) parts.push(tags['addr:street']);
+  if(tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
+  if(tags['addr:postcode']) parts.push(tags['addr:postcode']);
+  if(tags['addr:city']) parts.push(tags['addr:city']);
+  if(tags['addr:state']) parts.push(tags['addr:state']);
+  return parts.join(', ') || (tags['address']||'');
+}
+
+function renderResults(features){
+  // clear map markers
+  markersLayer.clearLayers();
+  // build HTML table
+  let html = `<table><thead><tr><th>#</th><th>Nome</th><th>Telefone</th><th>Website</th><th>Endereço</th></tr></thead><tbody>`;
+  features.forEach((f, i) => {
+    const p = f.properties;
+    html += `<tr data-i="${i}" style="cursor:default">
+      <td>${i+1}</td>
+      <td><strong>${escapeHtml(p.name)}</strong></td>
+      <td>${escapeHtml(p.phone||'')}</td>
+      <td>${p.website?`<a href="${escapeHtml(p.website)}" target="_blank">site</a>`:''}</td>
+      <td>${escapeHtml(p.addr||'')}</td>
+    </tr>`;
+    // add marker
+    const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]]).bindPopup(`<b>${escapeHtml(p.name)}</b><br>${escapeHtml(p.addr||'')}<br>${escapeHtml(p.phone||'')}`);
+    markersLayer.addLayer(marker);
+  });
+  html += '</tbody></table>';
+  resultsDiv.innerHTML = html;
+  // click on row to pan map
+  Array.from(resultsDiv.querySelectorAll('tr[data-i]')).forEach(tr=>{
+    tr.addEventListener('click', ()=> {
+      const idx = +tr.dataset.i;
+      const f = features[idx];
+      if(f) map.panTo([f.geometry.coordinates[1], f.geometry.coordinates[0]]);
+    });
+  });
+}
+
+function clearAll(){
+  id('q').value=''; id('city').value=''; id('radius').value='5000';
+  resultsDiv.innerHTML = '<em class="tiny">Limpo.</em>';
+  markersLayer.clearLayers();
+  lastFeatures = [];
+  setStatus('Pronto');
+}
+
+function downloadCSV(){
+  if(!lastFeatures.length){ alert('Sem dados para exportar.'); return; }
+  const keys = ['name','phone','website','address','lon','lat','osm_type','id'];
+  let csv = 'Nome,Telefone,Website,Endereço,Longitude,Latitude,OSM_type,OSM_id\n';
+  lastFeatures.forEach(f=>{
+    const p=f.properties;
+    const lon=f.geometry.coordinates[0], lat=f.geometry.coordinates[1];
+    const row = [
+      csvEscape(p.name),
+      csvEscape(p.phone||''),
+      csvEscape(p.website||''),
+      csvEscape(p.addr||''),
+      lon, lat,
+      p.osm_type, p.id
+    ].join(',');
+    csv += row + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'osm_businesses.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyCSV(){
+  if(!lastFeatures.length){ alert('Sem dados para copiar.'); return; }
+  const keys = ['Nome','Telefone','Website','Endereço','Longitude','Latitude','OSM_type','OSM_id'];
+  let csv = keys.join(',') + '\n';
+  lastFeatures.forEach(f=>{
+    const p=f.properties;
+    const lon=f.geometry.coordinates[0], lat=f.geometry.coordinates[1];
+    const row = [
+      p.name,
+      p.phone||'',
+      p.website||'',
+      p.addr||'',
+      lon, lat,
+      p.osm_type, p.id
+    ].map(x => `"${String(x).replace(/"/g,'""')}"`).join(',');
+    csv += row + '\n';
+  });
+  navigator.clipboard.writeText(csv).then(()=> alert('CSV copiado para a área de transferência.')).catch(()=> alert('Não foi possível copiar automaticamente.'));
+}
+
+function downloadGeoJSON(){
+  if(!lastFeatures.length){ alert('Sem dados para exportar.'); return; }
+  const geo = { type:'FeatureCollection', features: lastFeatures };
+  const blob = new Blob([JSON.stringify(geo, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'osm_businesses.geojson';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyJSON(){
+  if(!lastFeatures.length){ alert('Sem dados para copiar.'); return; }
+  navigator.clipboard.writeText(JSON.stringify({type:'FeatureCollection', features:lastFeatures}, null, 2)).then(()=> alert('JSON copiado para a área de transferência.'));
+}
+
+/* helpers */
+function setStatus(t){ status.textContent = t; }
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function csvEscape(s){ return `"${String(s||'').replace(/"/g,'""')}"`; }
+
+</script>
 </body>
 </html>
