@@ -73,14 +73,14 @@
                         </div>
                         <div>
                             <label for="cidade" class="block text-sm font-medium text-slate-300 mb-2">Cidade</label>
-                            <input type="text" id="cidade" name="cidade" placeholder="Ex: Alvorada do Gurguéia" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition">
+                            <input type="text" id="cidade" name="cidade" placeholder="Ex: Angical do Piauí" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition">
                         </div>
                     </div>
                     
                     <!-- Área de Texto para Dados Brutos -->
                     <div>
                         <label for="raw-data" class="block text-sm font-medium text-slate-300 mb-2">Dados Brutos (Cole aqui)</label>
-                        <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...&#10;Ex:&#10;Padaria Doce Pão&#10;Padaria&#10;Av. Central, 123&#10;+55 89 98107-2388"></textarea>
+                        <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...&#10;Pode colar vários estabelecimentos de uma vez.&#10;O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
                     </div>
 
                     <!-- Botão de Processar -->
@@ -159,16 +159,16 @@
             let toastTimeout;
 
             // --- Expressões Regulares (RegEx) ---
-            // RegEx para números de telefone brasileiros (bem abrangente)
-            // Cobre +55 (89) 98107-2388, (89) 98107-2388, 89 98107-2388, 98107-2388, 0800, etc.
             const phoneRegex = /(?:\+?55\s?)?(?:\(?\d{2,4}\)?\s?)?(\d{4,5}[-.\s]?\d{4}|\d{3,4}[\s-]?\d{4})/g;
+            // Lixo comum encontrado no topo do texto colado
+            const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto)$/i;
+            // Regex para verificar se a linha começa com uma nota (ex: "4,4" ou "4.4" ou "4")
+            const ratingRegex = /^(\d([,.]\d)?|\d{2})$/;
 
             // --- Funções ---
 
             /**
              * Mostra uma notificação toast (sem usar alert())
-             * @param {string} message - A mensagem para exibir.
-             * @param {string} type - 'success' (verde/cyan) ou 'error' (vermelho).
              */
             function showToast(message, type = 'success') {
                 clearTimeout(toastTimeout);
@@ -192,7 +192,6 @@
              * Renderiza a tabela de contatos a partir do estado `extractedContacts`.
              */
             function renderTable() {
-                // Limpa o corpo da tabela
                 tableBody.innerHTML = '';
 
                 if (extractedContacts.length === 0) {
@@ -221,79 +220,93 @@
                     clearBtn.disabled = false;
                 }
             }
+            
+            /**
+             * Formata um número de telefone bruto para um padrão limpo.
+             */
+            function formatPhoneNumber(rawNumber) {
+                let digits = rawNumber.replace(/\D/g, '');
+
+                if (digits.length === 13 && digits.startsWith('55')) {
+                    return `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 9)}-${digits.substring(9)}`;
+                } else if (digits.length === 12 && digits.startsWith('55')) {
+                    return `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 8)}-${digits.substring(8)}`;
+                } else if (digits.length === 11 && digits.startsWith('0800')) {
+                    return `${digits.substring(0, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`;
+                } else if (digits.length === 11) {
+                    digits = '55' + digits;
+                    return `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 9)}-${digits.substring(9)}`;
+                } else if (digits.length === 10) {
+                    digits = '55' + digits;
+                    return `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 8)}-${digits.substring(8)}`;
+                } else if (digits.length === 9) {
+                    return `${digits.substring(0, 5)}-${digits.substring(5)}`;
+                } else if (digits.length === 8) {
+                    return `${digits.substring(0, 4)}-${digits.substring(4)}`;
+                } else {
+                    return digits || 'Não encontrado';
+                }
+            }
+
 
             /**
-             * Tenta extrair o nome e o telefone do texto bruto.
-             * @param {string} text - O texto colado pelo usuário.
-             * @returns {object} - Um objeto com { name, number }.
+             * Tenta extrair o nome e o telefone de um *único bloco* de texto.
+             * @param {string} text - O bloco de texto de um estabelecimento.
+             * @returns {object} - { name, number }
              */
             function parseData(text) {
                 let name = 'Não encontrado';
                 let number = 'Não encontrado';
-
-                // 1. Tentar encontrar o Nome
-                // Remove linhas em branco
                 const lines = text.split('\n').filter(line => line.trim() !== '');
-                if (lines.length > 0) {
-                    // Assume que a primeira linha é o nome
-                    name = lines[0].trim();
+
+                // --- 1. Tentar encontrar o Nome (Método A: Padrão "Nota + avaliações") ---
+                for (let i = 0; i < lines.length - 1; i++) {
+                    const currentLine = lines[i].trim();
+                    const nextLine = lines[i+1].trim();
                     
-                    // Se a primeira linha parecer uma categoria (ex: "Padaria"), tenta a segunda
-                    // Compara com o input "tipo" ou se é muito curta
-                    if (lines.length > 1 && (name.toLowerCase() === tipoInput.value.toLowerCase() || name.length < 3)) {
-                        name = lines[1].trim();
+                    // Pega a primeira "palavra" da linha seguinte (que deve ser a nota)
+                    const firstWordOfNextLine = nextLine.split(' ')[0].trim();
+                    
+                    // 1. A linha seguinte (nextLine) começa com uma nota?
+                    const startsWithNumber = ratingRegex.test(firstWordOfNextLine);
+                    // 2. A linha seguinte (nextLine) contém "avaliações"?
+                    const hasAvaliacoes = nextLine.includes('avaliações') || nextLine.includes('avaliação');
+                    // 3. A linha atual (currentLine) é um nome válido?
+                    const isValidName = currentLine.length > 3 && !junkRegex.test(currentLine);
+
+                    if (startsWithNumber && hasAvaliacoes && isValidName) {
+                        name = currentLine;
+                        break; // Achamos!
+                    }
+                }
+
+                // --- 2. Tentar encontrar o Nome (Método B: Fallback para colagens simples) ---
+                if (name === 'Não encontrado' && lines.length > 0) {
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        // Filtra lixo conhecido E o tipo/categoria
+                        if (trimmedLine.length > 3 && !junkRegex.test(trimmedLine) && trimmedLine.toLowerCase() !== tipoInput.value.toLowerCase()) {
+                            name = trimmedLine;
+                            break; // Pega a primeira correspondência e sai
+                        }
                     }
                 }
                 
-                // 2. Tentar encontrar o Telefone
+                // --- 3. Tentar encontrar o Telefone ---
                 const phoneMatch = text.match(phoneRegex);
                 
                 if (phoneMatch) {
-                    // Pega a primeira ocorrência do número de telefone
-                    const rawNumber = phoneMatch[0];
-                    // Limpa o número, removendo tudo exceto dígitos
-                    let digits = rawNumber.replace(/\D/g, '');
-
-                    // Tenta formatar o número para o padrão +55 XX XXXXX-XXXX
-                    
-                    if (digits.length === 13 && digits.startsWith('55')) {
-                        // Formato: +55 89 98107-2388 (Celular 9 dígitos)
-                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 9)}-${digits.substring(9)}`;
-                    } else if (digits.length === 12 && digits.startsWith('55')) {
-                        // Formato: +55 89 8107-2388 (Fixo 8 dígitos)
-                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 8)}-${digits.substring(8)}`;
-                    } else if (digits.length === 11 && digits.startsWith('0800')) {
-                        // Formato: 0800 123 4567
-                        number = `${digits.substring(0, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`;
-                    } else if (digits.length === 11) {
-                        // Formato: 89 98107-2388 (Celular 9 dígitos, sem 55)
-                        // Adiciona o +55
-                        digits = '55' + digits;
-                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 9)}-${digits.substring(9)}`;
-                    } else if (digits.length === 10) {
-                        // Formato: 89 8107-2388 (Fixo 8 dígitos, sem 55)
-                        // Adiciona o +55
-                        digits = '55' + digits;
-                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 8)}-${digits.substring(8)}`;
-                    } else if (digits.length === 9) {
-                        // Formato: 98107-2388 (Celular 9 dígitos, sem DDD)
-                        // Formata, mas não pode adicionar DDD ou +55
-                        number = `${digits.substring(0, 5)}-${digits.substring(5)}`;
-                    } else if (digits.length === 8) {
-                        // Formato: 8107-2388 (Fixo 8 dígitos, sem DDD)
-                        // Formata
-                        number = `${digits.substring(0, 4)}-${digits.substring(4)}`;
-                    } else {
-                        // Se não se encaixar em nenhum padrão, usa o número "limpo"
-                        number = digits || 'Não encontrado';
-                    }
+                    // Pega a primeira ocorrência e formata
+                    number = formatPhoneNumber(phoneMatch[0]);
                 }
 
+t
                 return { name, number };
             }
 
             /**
              * Lida com o envio do formulário (botão "Processar").
+             * Processa múltiplos blocos separados por "Sobre esses dados".
              */
             function handleFormSubmit(e) {
                 e.preventDefault();
@@ -302,7 +315,7 @@
                 const tipo = tipoInput.value.trim();
                 const cidade = cidadeInput.value.trim();
 
-                // Validação
+                // Validações principais
                 if (!rawText) {
                     showToast('Por favor, cole os dados brutos.', 'error');
                     rawDataInput.focus();
@@ -319,23 +332,39 @@
                     return;
                 }
 
-                // Processa os dados
-                const { name, number } = parseData(rawText);
+                // --- LÓGICA DE PROCESSAMENTO EM LOTE ---
+                
+                // 1. Divide o texto bruto em blocos usando "Sobre esses dados" como divisor
+                const blocosDeTexto = rawText.split('Sobre esses dados');
+                let contatosAdicionados = 0;
 
-                // Adiciona ao estado
-                extractedContacts.push({
-                    name: name,
-                    number: number,
-                    type: tipo,
-                    city: cidade
+                // 2. Itera sobre cada bloco
+                blocosDeTexto.forEach(bloco => {
+                    if (bloco.trim().length < 10) return; // Ignora blocos pequenos ou vazios
+
+                    // 3. Processa cada bloco individualmente
+                    const { name, number } = parseData(bloco);
+
+                    // 4. Adiciona ao estado apenas se encontrar dados válidos
+                    if (name !== 'Não encontrado' || number !== 'Não encontrado') {
+                        extractedContacts.push({
+                            name: name,
+                            number: number,
+                            type: tipo, // Usa o mesmo tipo e cidade para todos
+                            city: cidade
+                        });
+                        contatosAdicionados++;
+                    }
                 });
 
-                // Atualiza a UI
-                renderTable();
-                showToast('Contato adicionado com sucesso!', 'success');
-
-                // Limpa o campo de dados brutos para a próxima entrada
-                rawDataInput.value = '';
+                // 5. Feedback final e atualização da UI
+                if (contatosAdicionados > 0) {
+                    renderTable();
+                    showToast(`${contatosAdicionados} contatos adicionados com sucesso!`, 'success');
+                    rawDataInput.value = ''; // Limpa o input
+                } else {
+                    showToast('Não foi possível encontrar nenhum contato válido no texto.', 'error');
+                }
             }
 
             /**
@@ -347,23 +376,20 @@
                     return;
                 }
 
-                // Define o cabeçalho do CSV
                 const headers = ['Nome', 'Numero', 'Tipo', 'Cidade'];
                 let csvContent = headers.join(',') + '\n';
 
-                // Adiciona as linhas
                 extractedContacts.forEach(contact => {
                     const row = [
                         `"${contact.name.replace(/"/g, '""')}"`,
-                        `"${contact.number.replace(/"/g, '""')}"`, // O número já está formatado
+                        `"${contact.number.replace(/"/g, '""')}"`,
                         `"${contact.type.replace(/"/g, '""')}"`,
                         `"${contact.city.replace(/"/g, '""')}"`
                     ];
                     csvContent += row.join(',') + '\n';
                 });
 
-                // Cria o arquivo para download
-                // \uFEFF é o "BOM" (Byte Order Mark) para garantir que o Excel abra o UTF-8 corretamente
+                // \uFEFF é o BOM (Byte Order Mark) para garantir compatibilidade com Excel
                 const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 const url = URL.createObjectURL(blob);
@@ -383,7 +409,6 @@
              * Lida com o clique no botão "Limpar Lista".
              */
             function handleClearList() {
-                // (Não usamos confirm() por segurança, mas poderíamos adicionar um modal customizado)
                 extractedContacts = [];
                 renderTable();
                 showToast('Lista de contatos limpa.', 'success');
@@ -393,6 +418,7 @@
              * Lida com cliques na tabela (para exclusão de linhas).
              */
             function handleTableClick(e) {
+                // Delegação de evento para os botões de delete
                 const deleteButton = e.target.closest('.delete-btn');
                 
                 if (deleteButton) {
@@ -411,7 +437,7 @@
             form.addEventListener('submit', handleFormSubmit);
             exportBtn.addEventListener('click', handleExportCSV);
             clearBtn.addEventListener('click', handleClearList);
-            tableBody.addEventListener('click', handleTableClick);
+            tableBody.addEventListener('click', handleTableClick); // Um listener no <tbody>
 
             // Inicializa a tabela no estado vazio
             renderTable();
