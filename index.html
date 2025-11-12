@@ -160,10 +160,8 @@
 
             // --- Expressões Regulares (RegEx) ---
             // RegEx para números de telefone brasileiros (bem abrangente)
-            // Cobre +55 (89) 98107-2388, (89) 98107-2388, 89 98107-2388, 98107-2388, etc.
-            const phoneRegex = /(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(\d{4,5}[-.\s]?\d{4})/g;
-            // RegEx para pegar a primeira linha que não pareça ser um endereço ou categoria simples
-            const nameRegex = /^(?!.*(Rua|Av\.|Avenida|Praça|BR-|Centro|Bairro|CEP|Disponível|Telefone|Celular)).*$/im;
+            // Cobre +55 (89) 98107-2388, (89) 98107-2388, 89 98107-2388, 98107-2388, 0800, etc.
+            const phoneRegex = /(?:\+?55\s?)?(?:\(?\d{2,4}\)?\s?)?(\d{4,5}[-.\s]?\d{4}|\d{3,4}[\s-]?\d{4})/g;
 
             // --- Funções ---
 
@@ -241,16 +239,54 @@
                     name = lines[0].trim();
                     
                     // Se a primeira linha parecer uma categoria (ex: "Padaria"), tenta a segunda
+                    // Compara com o input "tipo" ou se é muito curta
                     if (lines.length > 1 && (name.toLowerCase() === tipoInput.value.toLowerCase() || name.length < 3)) {
-                         name = lines[1].trim();
+                        name = lines[1].trim();
                     }
                 }
                 
                 // 2. Tentar encontrar o Telefone
                 const phoneMatch = text.match(phoneRegex);
+                
                 if (phoneMatch) {
                     // Pega a primeira ocorrência do número de telefone
-                    number = phoneMatch[0].trim();
+                    const rawNumber = phoneMatch[0];
+                    // Limpa o número, removendo tudo exceto dígitos
+                    let digits = rawNumber.replace(/\D/g, '');
+
+                    // Tenta formatar o número para o padrão +55 XX XXXXX-XXXX
+                    
+                    if (digits.length === 13 && digits.startsWith('55')) {
+                        // Formato: +55 89 98107-2388 (Celular 9 dígitos)
+                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 9)}-${digits.substring(9)}`;
+                    } else if (digits.length === 12 && digits.startsWith('55')) {
+                        // Formato: +55 89 8107-2388 (Fixo 8 dígitos)
+                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 8)}-${digits.substring(8)}`;
+                    } else if (digits.length === 11 && digits.startsWith('0800')) {
+                        // Formato: 0800 123 4567
+                        number = `${digits.substring(0, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`;
+                    } else if (digits.length === 11) {
+                        // Formato: 89 98107-2388 (Celular 9 dígitos, sem 55)
+                        // Adiciona o +55
+                        digits = '55' + digits;
+                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 9)}-${digits.substring(9)}`;
+                    } else if (digits.length === 10) {
+                        // Formato: 89 8107-2388 (Fixo 8 dígitos, sem 55)
+                        // Adiciona o +55
+                        digits = '55' + digits;
+                        number = `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 8)}-${digits.substring(8)}`;
+                    } else if (digits.length === 9) {
+                        // Formato: 98107-2388 (Celular 9 dígitos, sem DDD)
+                        // Formata, mas não pode adicionar DDD ou +55
+                        number = `${digits.substring(0, 5)}-${digits.substring(5)}`;
+                    } else if (digits.length === 8) {
+                        // Formato: 8107-2388 (Fixo 8 dígitos, sem DDD)
+                        // Formata
+                        number = `${digits.substring(0, 4)}-${digits.substring(4)}`;
+                    } else {
+                        // Se não se encaixar em nenhum padrão, usa o número "limpo"
+                        number = digits || 'Não encontrado';
+                    }
                 }
 
                 return { name, number };
@@ -319,7 +355,7 @@
                 extractedContacts.forEach(contact => {
                     const row = [
                         `"${contact.name.replace(/"/g, '""')}"`,
-                        `"${contact.number.replace(/"/g, '""')}"`,
+                        `"${contact.number.replace(/"/g, '""')}"`, // O número já está formatado
                         `"${contact.type.replace(/"/g, '""')}"`,
                         `"${contact.city.replace(/"/g, '""')}"`
                     ];
