@@ -1,324 +1,70 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>OSM Business Extractor — Grátis (OpenStreetMap + Overpass)</title>
-<!-- Leaflet CSS (map) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-sA+e2k2GTV6pVb5QmKkGkqQ2V0q3bQm3f5f9gQJg3qo=" crossorigin=""/>
-<style>
-  :root{--accent:#0b63d6}
-  body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f5f7fb;margin:0;padding:18px;color:#122}
-  .wrap{max-width:1100px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 8px 30px rgba(12,20,40,0.06)}
-  h1{margin:0;font-size:20px;color:var(--accent)}
-  p.lead{margin:6px 0 16px;color:#444}
-  .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
-  input[type="text"], select {padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px}
-  button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
-  button.ghost{background:#eef4ff;color:var(--accent);border:1px solid #dbe9ff}
-  .controls{display:flex;gap:8px;flex-wrap:wrap}
-  #map{height:420px;border-radius:8px;border:1px solid #e6eefc;margin-top:12px}
-  #results{margin-top:12px;max-height:320px;overflow:auto;border-radius:8px;border:1px solid #eee;padding:8px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:13px}
-  th{background:#f8fbff;color:#0b63d6}
-  .tiny{font-size:12px;color:#666}
-  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .badge{background:#e8f2ff;color:var(--accent);padding:6px 10px;border-radius:999px;font-size:12px}
-  a.small{font-size:13px;color:var(--accent);text-decoration:none}
-</style>
+  <meta charset="UTF-8">
+  <title>Extrator de Negócios Flowmize</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f4f4f4; }
+    input, button { padding: 10px; margin: 5px; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    #map { height: 400px; margin-top: 10px; border-radius: 10px; }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>OSM Business Extractor — 100% grátis</h1>
-    <p class="lead">Pesquise por segmento + cidade e extraia negócios do OpenStreetMap (via Overpass). Sem API key. Resultados: nome, telefone, website, endereço quando disponíveis.</p>
+  <h2>🌍 Extrator de Negócios Grátis (OpenStreetMap)</h2>
+  <input id="query" type="text" placeholder="Ex: pizzaria São Luís" size="40">
+  <button onclick="buscar()">Buscar</button>
 
-    <div class="row">
-      <div style="flex:1;min-width:220px">
-        <label class="tiny">1) Segmento (ex: pizzaria, padaria, bar, hairdresser)</label><br>
-        <input id="q" type="text" placeholder="Ex: pizzaria, padaria, bar" value="pizzaria">
-      </div>
-      <div style="width:260px">
-        <label class="tiny">2) Cidade / local (ex: São Luís, MA)</label><br>
-        <input id="city" type="text" placeholder="Ex: São Luís, MA" value="São Luís, MA">
-      </div>
-      <div style="width:160px">
-        <label class="tiny">3) Raio (metros)</label><br>
-        <input id="radius" type="text" value="5000" placeholder="5000">
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <label class="tiny">&nbsp;</label>
-        <div class="controls">
-          <button id="btnSearch">🔎 Buscar</button>
-          <button id="btnClear" class="ghost">Limpar</button>
-        </div>
-      </div>
-    </div>
+  <div id="map"></div>
 
-    <div class="actions">
-      <div class="badge" id="status">Pronto</div>
-      <div class="tiny" style="margin-left:8px">Use com responsabilidade — limite requisições e espere entre buscas.</div>
-      <div style="margin-left:auto" class="tiny">Favor ler: <a class="small" href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank">Nominatim policy</a></div>
-    </div>
+  <table id="resultados">
+    <thead><tr><th>Nome</th><th>Endereço</th><th>Telefone</th></tr></thead>
+    <tbody></tbody>
+  </table>
 
-    <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let map = L.map('map').setView([-5.1, -42.8], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
 
-    <div style="display:flex;gap:12px;margin-top:12px;align-items:center;flex-wrap:wrap">
-      <div style="flex:1;min-width:240px">
-        <div class="tiny">Resultados</div>
-        <div id="results"><em class="tiny">Ainda não buscou.</em></div>
-      </div>
-      <div style="width:220px">
-        <div class="tiny">Exportar</div>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <button id="btnCSV">Exportar CSV</button>
-          <button id="btnCopy" class="ghost">Copiar CSV</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="btnGeoJSON" class="ghost">Baixar GeoJSON</button>
-          <button id="btnCopyJSON" class="ghost">Copiar JSON</button>
-        </div>
-      </div>
-    </div>
+    async function buscar() {
+      const termo = document.getElementById("query").value;
+      if (!termo) return alert("Digite algo para pesquisar!");
 
-    <p class="tiny" style="margin-top:12px">Observações: Nominatim e Overpass são gratuitos mas limitados. Se der erro 429, espere alguns minutos. Nem todo objeto tem telefone/website; buscamos nos campos <code>phone</code>, <code>contact:phone</code> e <code>website</code>.</p>
-  </div>
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(termo)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (!data.length) return alert("Nenhum resultado encontrado.");
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
- integrity="sha256-o9N1j7kB7g1k1Qf2kqV8g6nQ0s3wY1p0s9p3h2gQ3k0=" crossorigin=""></script>
+      const { lat, lon } = data[0];
+      map.setView([lat, lon], 14);
 
-<script>
-/*
-  OSM Business Extractor
-  - Geocodifica a cidade com Nominatim
-  - Busca nodes/ways/relations via Overpass API dentro de raio
-  - Extrai: name, phone, contact:phone, website, addr:*
-  - Exporta CSV e GeoJSON
-  - Gratuito (OpenStreetMap)
-*/
+      const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:5000,${lat},${lon})[name];out;`;
+      const overpassResp = await fetch(overpassUrl);
+      const overpassData = await overpassResp.json();
 
-const map = L.map('map').setView([-2.53,-44.3], 5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '&copy; OpenStreetMap'
-}).addTo(map);
-let markersLayer = L.layerGroup().addTo(map);
+      const tbody = document.querySelector("#resultados tbody");
+      tbody.innerHTML = "";
+      overpassData.elements.forEach(el => {
+        const nome = el.tags.name || "Sem nome";
+        const endereco = el.tags["addr:full"] || el.tags["addr:street"] || "Não informado";
+        const telefone = el.tags.phone || el.tags["contact:phone"] || "Não informado";
 
-const status = id('status');
-const resultsDiv = id('results');
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${nome}</td><td>${endereco}</td><td>${telefone}</td>`;
+        tbody.appendChild(tr);
 
-let lastFeatures = []; // GeoJSON features
-
-document.getElementById('btnSearch').addEventListener('click', doSearch);
-document.getElementById('btnClear').addEventListener('click', ()=>{ clearAll(); });
-document.getElementById('btnCSV').addEventListener('click', ()=> downloadCSV());
-document.getElementById('btnCopy').addEventListener('click', ()=> copyCSV());
-document.getElementById('btnGeoJSON').addEventListener('click', ()=> downloadGeoJSON());
-document.getElementById('btnCopyJSON').addEventListener('click', ()=> copyJSON());
-
-function id(v){ return document.getElementById(v); }
-
-async function doSearch(){
-  const query = id('q').value.trim();
-  const city = id('city').value.trim();
-  const radius = parseInt(id('radius').value.trim()) || 5000;
-  if(!query || !city){ alert('Preencha segmento e cidade.'); return; }
-
-  setStatus('Geocodificando cidade...');
-  try{
-    // Nominatim search
-    const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`;
-    const nomRes = await fetch(nomUrl, {headers:{ 'Accept':'application/json' }});
-    if(!nomRes.ok) throw new Error('Erro na geocodificação: ' + nomRes.status);
-    const nomJson = await nomRes.json();
-    if(!nomJson || !nomJson.length) { setStatus('Cidade não encontrada'); alert('Cidade não encontrada pelo Nominatim. Tente mudar o texto.'); return; }
-    const place = nomJson[0];
-    const lat = parseFloat(place.lat), lon = parseFloat(place.lon);
-    map.setView([lat,lon], Math.max(12, Math.round(10 - Math.log(radius)/Math.log(2))));
-    setStatus(`Buscando "${query}" em ${city} (raio ${radius}m)...`);
-    // build Overpass query: search nodes/ways/relations with name and amenity/shop/tourism/office etc matching the term OR tag equals query
-    const term = query.toLowerCase();
-    // We'll attempt matching with name~term OR (amenity~term OR shop~term OR tourism~term OR office~term)
-    const overpassQ = `[out:json][timeout:60];
-(
-  node(around:${radius},${lat},${lon})[name~"${escapeRegex(term)}",i];
-  way(around:${radius},${lat},${lon})[name~"${escapeRegex(term)}",i];
-  relation(around:${radius},${lat},${lon})[name~"${escapeRegex(term)}",i];
-  node(around:${radius},${lat},${lon})[amenity~"${escapeRegex(term)}",i];
-  way(around:${radius},${lat},${lon})[amenity~"${escapeRegex(term)}",i];
-  relation(around:${radius},${lat},${lon})[amenity~"${escapeRegex(term)}",i];
-  node(around:${radius},${lat},${lon})[shop~"${escapeRegex(term)}",i];
-  way(around:${radius},${lat},${lon})[shop~"${escapeRegex(term)}",i];
-  relation(around:${radius},${lat},${lon})[shop~"${escapeRegex(term)}",i];
-  node(around:${radius},${lat},${lon})[tourism~"${escapeRegex(term)}",i];
-  way(around:${radius},${lat},${lon})[tourism~"${escapeRegex(term)}",i];
-  relation(around:${radius},${lat},${lon})[tourism~"${escapeRegex(term)}",i];
-);
-out center meta;`;
-
-    // POST to Overpass
-    setStatus('Consultando Overpass (pode demorar alguns segundos)...');
-    const ovRes = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
-      body: 'data=' + encodeURIComponent(overpassQ)
-    });
-    if(!ovRes.ok) throw new Error('Overpass error: ' + ovRes.status);
-    const ovJson = await ovRes.json();
-    // parse elements
-    const elems = ovJson.elements || [];
-    if(!elems.length){ setStatus('Nenhum resultado encontrado.'); resultsDiv.innerHTML='<em class="tiny">Nenhum resultado.</em>'; lastFeatures=[]; markersLayer.clearLayers(); return; }
-
-    // map elements to GeoJSON features
-    const feats = elems.map(el => {
-      let lat = el.lat, lon = el.lon;
-      if(!lat && el.center){ lat = el.center.lat; lon = el.center.lon; }
-      const tags = el.tags || {};
-      const name = tags.name || '';
-      const phone = tags.phone || tags['contact:phone'] || tags['telephone'] || '';
-      const website = tags.website || tags['contact:website'] || '';
-      const addr = buildAddress(tags);
-      return {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [parseFloat(lon), parseFloat(lat)] },
-        properties: {
-          id: el.id,
-          osm_type: el.type,
-          name, phone, website, addr, tags
+        if (el.lat && el.lon) {
+          L.marker([el.lat, el.lon])
+            .addTo(map)
+            .bindPopup(`<b>${nome}</b><br>${endereco}<br>${telefone}`);
         }
-      };
-    }).filter(f => f.geometry && f.properties.name);
-
-    lastFeatures = feats;
-    renderResults(feats);
-    setStatus(`Pronto — ${feats.length} resultados mostrados.`);
-  } catch(err){
-    console.error(err);
-    setStatus('Erro: ' + err.message);
-    alert('Erro: ' + err.message);
-  }
-}
-
-function escapeRegex(s){
-  // escape special chars for Overpass regex
-  return String(s).replace(/["\\]/g, '\\$&');
-}
-
-function buildAddress(tags){
-  const parts = [];
-  if(tags['addr:street']) parts.push(tags['addr:street']);
-  if(tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
-  if(tags['addr:postcode']) parts.push(tags['addr:postcode']);
-  if(tags['addr:city']) parts.push(tags['addr:city']);
-  if(tags['addr:state']) parts.push(tags['addr:state']);
-  return parts.join(', ') || (tags['address']||'');
-}
-
-function renderResults(features){
-  // clear map markers
-  markersLayer.clearLayers();
-  // build HTML table
-  let html = `<table><thead><tr><th>#</th><th>Nome</th><th>Telefone</th><th>Website</th><th>Endereço</th></tr></thead><tbody>`;
-  features.forEach((f, i) => {
-    const p = f.properties;
-    html += `<tr data-i="${i}" style="cursor:default">
-      <td>${i+1}</td>
-      <td><strong>${escapeHtml(p.name)}</strong></td>
-      <td>${escapeHtml(p.phone||'')}</td>
-      <td>${p.website?`<a href="${escapeHtml(p.website)}" target="_blank">site</a>`:''}</td>
-      <td>${escapeHtml(p.addr||'')}</td>
-    </tr>`;
-    // add marker
-    const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]]).bindPopup(`<b>${escapeHtml(p.name)}</b><br>${escapeHtml(p.addr||'')}<br>${escapeHtml(p.phone||'')}`);
-    markersLayer.addLayer(marker);
-  });
-  html += '</tbody></table>';
-  resultsDiv.innerHTML = html;
-  // click on row to pan map
-  Array.from(resultsDiv.querySelectorAll('tr[data-i]')).forEach(tr=>{
-    tr.addEventListener('click', ()=> {
-      const idx = +tr.dataset.i;
-      const f = features[idx];
-      if(f) map.panTo([f.geometry.coordinates[1], f.geometry.coordinates[0]]);
-    });
-  });
-}
-
-function clearAll(){
-  id('q').value=''; id('city').value=''; id('radius').value='5000';
-  resultsDiv.innerHTML = '<em class="tiny">Limpo.</em>';
-  markersLayer.clearLayers();
-  lastFeatures = [];
-  setStatus('Pronto');
-}
-
-function downloadCSV(){
-  if(!lastFeatures.length){ alert('Sem dados para exportar.'); return; }
-  const keys = ['name','phone','website','address','lon','lat','osm_type','id'];
-  let csv = 'Nome,Telefone,Website,Endereço,Longitude,Latitude,OSM_type,OSM_id\n';
-  lastFeatures.forEach(f=>{
-    const p=f.properties;
-    const lon=f.geometry.coordinates[0], lat=f.geometry.coordinates[1];
-    const row = [
-      csvEscape(p.name),
-      csvEscape(p.phone||''),
-      csvEscape(p.website||''),
-      csvEscape(p.addr||''),
-      lon, lat,
-      p.osm_type, p.id
-    ].join(',');
-    csv += row + '\n';
-  });
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'osm_businesses.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function copyCSV(){
-  if(!lastFeatures.length){ alert('Sem dados para copiar.'); return; }
-  const keys = ['Nome','Telefone','Website','Endereço','Longitude','Latitude','OSM_type','OSM_id'];
-  let csv = keys.join(',') + '\n';
-  lastFeatures.forEach(f=>{
-    const p=f.properties;
-    const lon=f.geometry.coordinates[0], lat=f.geometry.coordinates[1];
-    const row = [
-      p.name,
-      p.phone||'',
-      p.website||'',
-      p.addr||'',
-      lon, lat,
-      p.osm_type, p.id
-    ].map(x => `"${String(x).replace(/"/g,'""')}"`).join(',');
-    csv += row + '\n';
-  });
-  navigator.clipboard.writeText(csv).then(()=> alert('CSV copiado para a área de transferência.')).catch(()=> alert('Não foi possível copiar automaticamente.'));
-}
-
-function downloadGeoJSON(){
-  if(!lastFeatures.length){ alert('Sem dados para exportar.'); return; }
-  const geo = { type:'FeatureCollection', features: lastFeatures };
-  const blob = new Blob([JSON.stringify(geo, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'osm_businesses.geojson';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function copyJSON(){
-  if(!lastFeatures.length){ alert('Sem dados para copiar.'); return; }
-  navigator.clipboard.writeText(JSON.stringify({type:'FeatureCollection', features:lastFeatures}, null, 2)).then(()=> alert('JSON copiado para a área de transferência.'));
-}
-
-/* helpers */
-function setStatus(t){ status.textContent = t; }
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function csvEscape(s){ return `"${String(s||'').replace(/"/g,'""')}"`; }
-
-</script>
+      });
+    }
+  </script>
 </body>
 </html>
