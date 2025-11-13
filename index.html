@@ -161,9 +161,9 @@
             // --- Expressões Regulares (RegEx) ---
             const phoneRegex = /(?:\+?55\s?)?(?:\(?\d{2,4}\)?\s?)?(\d{4,5}[-.\s]?\d{4}|\d{3,4}[\s-]?\d{4})/g;
             // Lixo comum encontrado no topo do texto colado
-            const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Resumo de avaliações|Todas as avaliações|Lugares também pesquisados|Sobre esses dados|Adicionar fotos e vídeos|Avaliar|Rotas|Iniciar|Salvar|Compartilhar|Reivindicar esta empresa)$/i;
-            // Regex para identificar linhas de avaliação (ex: "4,139 avaliações")
-            const ratingLineRegex = /^(\d+([,.]\d+)?)\s+avaliaç(ões|ão)$/i;
+            const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Street View|Resumo de avaliações)$/i;
+            // Regex para verificar se a linha começa com uma nota (ex: "4,4" ou "4.4" ou "4")
+            const ratingRegex = /^(\d([,.]\d)?|\d{2})$/;
 
             // --- Funções ---
 
@@ -248,6 +248,7 @@
                 }
             }
 
+
             /**
              * Tenta extrair o nome e o telefone de um *único bloco* de texto.
              * @param {string} text - O bloco de texto de um estabelecimento.
@@ -256,49 +257,37 @@
             function parseData(text) {
                 let name = 'Não encontrado';
                 let number = 'Não encontrado';
-                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const lines = text.split('\n').map(l => l.trim()).filter(line => line !== '');
 
-                // --- 1. Tentar encontrar o Nome (Método A: Buscar antes da primeira linha de avaliação) ---
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    
-                    // Verifica se a linha corresponde ao padrão de avaliação (ex: "4,139 avaliações")
-                    if (ratingLineRegex.test(line)) {
-                        // A linha anterior deve ser o nome do estabelecimento
-                        if (i > 0) {
-                            const potentialName = lines[i-1].trim();
-                            
-                            // Verifica se é um nome válido (não é lixo, não é vazio, tem comprimento razoável)
-                            if (potentialName && potentialName.length > 3 && !junkRegex.test(potentialName)) {
-                                name = potentialName;
-                                break; // Achamos o nome
-                            }
-                        }
+                // --- NOVO: 1. Tentativa direta baseada na PRIMEIRA ocorrência de "avaliações"/"avaliação"
+                // Pega a linha imediatamente anterior à primeira linha que contenha 'avalia'
+                const avalIndex = lines.findIndex(l => l.toLowerCase().includes('avalia'));
+                if (avalIndex > 0) {
+                    const candidate = lines[avalIndex - 1].trim();
+                    if (candidate.length > 1 && !junkRegex.test(candidate) && candidate.toLowerCase() !== tipoInput.value.toLowerCase()) {
+                        name = candidate;
                     }
                 }
 
-                // --- 2. Tentar encontrar o Nome (Método B: Buscar por padrão alternativo de avaliação) ---
+                // --- 2. Tentar encontrar o Nome (Método A: Padrão "Nota + avaliações") apenas se ainda não encontrou ---
                 if (name === 'Não encontrado') {
-                    for (let i = 0; i < lines.length; i++) {
-                        const line = lines[i].trim();
+                    for (let i = 0; i < lines.length - 1; i++) {
+                        const currentLine = lines[i].trim();
+                        const nextLine = lines[i+1].trim();
                         
-                        // Verifica se a linha contém "avaliações" ou "avaliação" (padrão mais flexível)
-                        if (line.includes('avaliações') || line.includes('avaliação')) {
-                            // A linha anterior deve ser o nome do estabelecimento
-                            if (i > 0) {
-                                const potentialName = lines[i-1].trim();
-                                
-                                // Verifica se é um nome válido
-                                if (potentialName && potentialName.length > 3 && !junkRegex.test(potentialName)) {
-                                    name = potentialName;
-                                    break; // Achamos o nome
-                                }
-                            }
+                        const firstWordOfNextLine = nextLine.split(' ')[0].trim();
+                        const startsWithNumber = ratingRegex.test(firstWordOfNextLine);
+                        const hasAvaliacoes = nextLine.toLowerCase().includes('avalia');
+                        const isValidName = currentLine.length > 3 && !junkRegex.test(currentLine);
+
+                        if (startsWithNumber && hasAvaliacoes && isValidName) {
+                            name = currentLine;
+                            break;
                         }
                     }
                 }
 
-                // --- 3. Tentar encontrar o Nome (Método C: Fallback para colagens simples) ---
+                // --- 3. Tentar encontrar o Nome (Método B: Fallback para colagens simples) ---
                 if (name === 'Não encontrado' && lines.length > 0) {
                     for (const line of lines) {
                         const trimmedLine = line.trim();
