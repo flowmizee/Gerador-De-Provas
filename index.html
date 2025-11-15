@@ -1,567 +1,611 @@
 <!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Extrator de Contatos</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Pequeno ajuste para o cabeçalho sticky da tabela */
-    #contacts-table thead th { backdrop-filter: blur(4px); }
-    
-    /* Estilo personalizado para o botão de lixeira */
-    .delete-btn {
-      border: 1px solid #ef4444;
-      transition: all 0.2s ease;
-    }
-    .delete-btn:hover {
-      background-color: #ef4444;
-      transform: scale(1.05);
-    }
-  </style>
-</head>
-<body class="bg-slate-900 text-slate-200 min-h-screen p-6">
-  <!-- Toast Notification (para feedback, sem usar alert()) -->
-  <div id="toast" class="fixed top-5 right-5 bg-cyan-600 text-white py-2 px-5 rounded-lg shadow-lg hidden transition-all duration-300 z-50">
-    <span id="toast-message"></span>
-  </div>
+<html lang="pt-br">    
+<head>    
+  <meta charset="utf-8" />    
+  <meta name="viewport" content="width=device-width,initial-scale=1" />    
+  <title>Extrator de Contatos</title>    
+  <script src="https://cdn.tailwindcss.com"></script>    
+  <style>    
+    /* Pequeno ajuste para o cabeçalho sticky da tabela */    
+    #contacts-table thead th { 
+      backdrop-filter: blur(4px); 
+    }  
 
-  <div class="max-w-7xl mx-auto">
-    <!-- Cabeçalho -->
-    <header class="mb-8">
-      <h1 class="text-3xl md:text-4xl font-bold text-cyan-400 mb-2">Extrator de Contatos</h1>
-      <p class="text-lg text-slate-400">Cole os dados brutos do Google Maps, organize e exporte como CSV.</p>
-    </header>
+    /* Estilo personalizado para o botão de lixeira */    
+    .delete-btn {    
+      border: 1px solid #ef4444;    
+      transition: all 0.2s ease;    
+    }    
+    .delete-btn:hover {    
+      background-color: #ef4444;    
+      transform: scale(1.05);    
+    }    
+  </style>    
+</head>    
 
-    <!-- Container Principal (Grid Responsivo) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <!-- Coluna 1: Painel de Entrada -->
-      <div class="bg-slate-800 p-6 rounded-xl shadow-2xl">
-        <h2 class="text-2xl font-semibold mb-6 text-white flex items-center">
-          <!-- Ícone SVG para "Entrada" -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-cyan-400"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
-          Painel de Controle
-        </h2>
+<body class="bg-slate-900 text-slate-200 min-h-screen p-6">    
 
-        <form id="contact-form" class="space-y-5">
-          <!-- Inputs de Contexto -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label for="tipo" class="block text-sm font-medium text-slate-300 mb-2">Tipo de Estabelecimento</label>
-              <input type="text" id="tipo" name="tipo" placeholder="Ex: Restaurante, Padaria..." class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition">
-            </div>
-            <div>
-              <label for="cidade" class="block text-sm font-medium text-slate-300 mb-2">Cidade</label>
-              <input type="text" id="cidade" name="cidade" placeholder="Ex: Angical do Piauí" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition">
-            </div>
-          </div>
+  <!-- Toast Notification (para feedback, sem usar alert()) -->    
+  <div id="toast" class="fixed top-5 right-5 bg-cyan-600 text-white py-2 px-5 rounded-lg shadow-lg hidden transition-all duration-300 z-50">    
+    <span id="toast-message"></span>    
+  </div>    
 
-          <!-- Área de Texto para Dados Brutos -->
-          <div>
-            <label for="raw-data" class="block text-sm font-medium text-slate-300 mb-2">Dados Brutos (Cole aqui)</label>
-            <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...&#10;Pode colar vários estabelecimentos de uma vez.&#10;O app tentará separá-los usando 'Sobre esses dados' como divisor.&#10;&#10;Também aceita listas simples como:&#10;Rancho Burger: +55 86 99934-5970&#10;Amarante Burguer: +55 86 99570-1863&#10;NA BRASA AMARANTE: +55 86 99530-5760"></textarea>
-          </div>
+  <div class="max-w-7xl mx-auto">    
+    <!-- Cabeçalho -->    
+    <header class="mb-8">    
+      <h1 class="text-3xl md:text-4xl font-bold text-cyan-400 mb-2">Extrator de Contatos</h1>    
+      <p class="text-lg text-slate-400">Cole os dados brutos do Google Maps, organize e exporte como CSV.</p>    
+    </header>  
 
-          <!-- Botão de Processar -->
-          <button type="submit" id="process-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1">
-            <!-- Ícone SVG para "Processar" -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-            Processar e Adicionar à Lista
-          </button>
+    <!-- Container Principal (Grid Responsivo) -->    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">    
+
+      <!-- Coluna 1: Painel de Entrada -->    
+      <div class="bg-slate-800 p-6 rounded-xl shadow-2xl">    
+        <h2 class="text-2xl font-semibold mb-6 text-white flex items-center">    
+          <!-- Ícone SVG para "Entrada" -->    
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-cyan-400">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path>
+          </svg>    
+          Painel de Controle    
+        </h2>    
+
+        <form id="contact-form" class="space-y-5">    
+          <!-- Inputs de Contexto -->    
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">    
+            <div>    
+              <label for="tipo" class="block text-sm font-medium text-slate-300 mb-2">Tipo de Estabelecimento</label>    
+              <input 
+                type="text" 
+                id="tipo" 
+                name="tipo" 
+                placeholder="Ex: Restaurante, Padaria..." 
+                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+              >    
+            </div>    
+            <div>    
+              <label for="cidade" class="block text-sm font-medium text-slate-300 mb-2">Cidade</label>    
+              <input 
+                type="text" 
+                id="cidade" 
+                name="cidade" 
+                placeholder="Ex: Angical do Piauí" 
+                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+              >    
+            </div>    
+          </div>    
+
+          <!-- Área de Texto para Dados Brutos -->    
+          <div>    
+            <label for="raw-data" class="block text-sm font-medium text-slate-300 mb-2">Dados Brutos (Cole aqui)</label>    
+            <textarea 
+              id="raw-data" 
+              name="raw-data" 
+              rows="10" 
+              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" 
+              placeholder="Cole o bloco de texto copiado do Google Maps aqui...
+Pode colar vários estabelecimentos de uma vez.
+O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>    
+          </div>    
+
+          <!-- Botão de Processar -->    
+          <button 
+            type="submit" 
+            id="process-btn" 
+            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1"
+          >    
+            <!-- Ícone SVG para "Processar" -->    
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>    
+            Processar e Adicionar à Lista    
+          </button>    
         </form>
-      </div>
+      </div>      
 
-      <!-- Coluna 2: Tabela de Saída -->
-      <div class="bg-slate-800 p-6 rounded-xl shadow-2xl">
-        <h2 class="text-2xl font-semibold mb-6 text-white flex items-center">
-          <!-- Ícone SVG para "Lista" -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-cyan-400"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-          Contatos Extraídos
-        </h2>
+      <!-- Coluna 2: Tabela de Saída -->      
+      <div class="bg-slate-800 p-6 rounded-xl shadow-2xl">    
+        <h2 class="text-2xl font-semibold mb-6 text-white flex items-center">    
+          <!-- Ícone SVG para "Lista" -->    
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-cyan-400">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>    
+          Contatos Extraídos    
+        </h2>    
 
-        <!-- Wrapper da Tabela para rolagem em telas pequenas -->
-        <div id="table-wrapper" class="overflow-x-auto max-h-[400px] rounded-lg border border-slate-700">
-          <table id="contacts-table" class="w-full text-left">
-            <thead class="bg-slate-700 sticky top-0">
-              <tr>
-                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Nome</th>
-                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Número</th>
-                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Tipo</th>
-                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Cidade</th>
-                <th class="p-3 text-sm font-semibold text-slate-300 uppercase text-center">Ação</th>
-              </tr>
-            </thead>
-            <tbody id="contacts-tbody" class="divide-y divide-slate-700">
-              <!-- Linhas serão inseridas pelo JavaScript -->
-              <tr id="empty-row">
-                <td colspan="5" class="p-8 text-center text-slate-500">Nenhum contato adicionado ainda.</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Wrapper da Tabela para rolagem em telas pequenas -->    
+        <div id="table-wrapper" class="overflow-x-auto max-h-[400px] rounded-lg border border-slate-700">    
+          <table id="contacts-table" class="w-full text-left">    
+            <thead class="bg-slate-700 sticky top-0">    
+              <tr>    
+                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Nome</th>    
+                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Número</th>    
+                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Tipo</th>    
+                <th class="p-3 text-sm font-semibold text-slate-300 uppercase">Cidade</th>    
+                <th class="p-3 text-sm font-semibold text-slate-300 uppercase text-center">Ação</th>    
+              </tr>    
+            </thead>    
+            <tbody id="contacts-tbody" class="divide-y divide-slate-700">    
+              <!-- Linhas serão inseridas pelo JavaScript -->    
+              <tr id="empty-row">    
+                <td colspan="5" class="p-8 text-center text-slate-500">Nenhum contato adicionado ainda.</td>    
+              </tr>    
+            </tbody>    
+          </table>    
+        </div>    
+
+        <!-- Botões de Ação da Tabela -->    
+        <div class="mt-6 flex flex-col sm:flex-row gap-4">    
+          <button 
+            id="export-btn" 
+            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" 
+            disabled
+          >    
+            <!-- Ícone SVG para "Exportar" -->    
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>    
+            Exportar CSV    
+          </button>    
+
+          <button 
+            id="clear-btn" 
+            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" 
+            disabled
+          >    
+            <!-- Ícone SVG para "Limpar" -->    
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>    
+            Limpar Lista    
+          </button>    
         </div>
+      </div>    
 
-        <!-- Botões de Ação da Tabela -->
-        <div class="mt-6 flex flex-col sm:flex-row gap-4">
-          <button id="export-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" disabled>
-            <!-- Ícone SVG para "Exportar" -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Exportar CSV
-          </button>
-          <button id="clear-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" disabled>
-            <!-- Ícone SVG para "Limpar" -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            Limpar Lista
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+    </div>    
+  </div>    
 
-  <!-- Script Principal -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // --- Seletores do DOM ---
-      const form = document.getElementById('contact-form');
-      const rawDataInput = document.getElementById('raw-data');
-      const tipoInput = document.getElementById('tipo');
-      const cidadeInput = document.getElementById('cidade');
-      const tableBody = document.getElementById('contacts-tbody');
-      const emptyRow = document.getElementById('empty-row');
-      const exportBtn = document.getElementById('export-btn');
-      const clearBtn = document.getElementById('clear-btn');
-      const toast = document.getElementById('toast');
-      const toastMessage = document.getElementById('toast-message');
+  <!-- Script Principal -->    
+  <script>    
+    document.addEventListener('DOMContentLoaded', () => {    
+      // --- Seletores do DOM ---    
+      const form = document.getElementById('contact-form');    
+      const rawDataInput = document.getElementById('raw-data');    
+      const tipoInput = document.getElementById('tipo');    
+      const cidadeInput = document.getElementById('cidade');    
+      const tableBody = document.getElementById('contacts-tbody');    
+      const emptyRow = document.getElementById('empty-row');    
+      const exportBtn = document.getElementById('export-btn');    
+      const clearBtn = document.getElementById('clear-btn');    
+      const toast = document.getElementById('toast');    
+      const toastMessage = document.getElementById('toast-message');    
 
-      // --- Estado da Aplicação ---
-      let extractedContacts = [];
-      let toastTimeout;
+      // --- Estado da Aplicação ---    
+      let extractedContacts = [];    
+      let toastTimeout;    
 
-      // --- Expressões Regulares (RegEx) ---
-      // Phone regex mais permissiva para capturar vários formatos
-      const phoneRegex = /(?:\+?55\s*)?(?:\(?\d{2}\)?[\s.-]*)?(?:9?\d{4}[\s.-]*\d{4}|\d{4}[\s.-]*\d{4})/g;
+      // --- Expressões Regulares (RegEx) ---    
+      // Phone regex mais permissiva para capturar vários formatos    
+      const phoneRegex = /(?:\+?55\s*)?(?:?\d{2}?[\s.-]*)?(?:9?\d{4}[\s.-]*\d{4}|\d{4}[\s.-]*\d{4})/g;    
 
-      // Lixo comum encontrado no topo do texto colado
-      const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Street View|Resumo de avaliações|R\.|Av\.|Avenida|Travessa|Alameda|Praça|Largo|Vila|Bairro|Centro|Zona|Rod\.|Rodovia|BR-|Estrada)$/i;
+      // Lixo comum encontrado no topo do texto colado    
+      const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Street View|Resumo de avaliações|R\.|Av\.|Avenida|Travessa|Alameda|Praça|Largo|Vila|Bairro|Centro|Zona|Rod\.|Rodovia|BR-|Estrada)$/i;    
 
-      // Regex para verificar se a linha começa com uma nota (ex: "4,4" ou "4.4" ou "4")
-      const ratingRegex = /^(\d([,.]\d)?|\d{2})$/;
+      // Regex para verificar se a linha é só nota (ex: "4,4" ou "4.4" ou "4" ou "40")    
+      const ratingRegex = /^(\d{1,2}([,.]\d)?|\d{1,3}([,.]\d{1,2})?)$/;    
 
-      // Regex para detectar linhas simples no formato "Nome: telefone"
-      const simpleContactRegex = /^([^:\n]+?)\s*[:\-–]\s*(.+)$/;
+      // --- Funções ---    
 
-      // --- Funções ---
-      /**
-       * Mostra uma notificação toast (sem usar alert())
-       */
-      function showToast(message, type = 'success') {
-        clearTimeout(toastTimeout);
-        toastMessage.textContent = message;
-        if (type === 'error') {
-          toast.classList.remove('bg-cyan-600');
-          toast.classList.add('bg-red-600');
-        } else {
-          toast.classList.remove('bg-red-600');
-          toast.classList.add('bg-cyan-600');
-        }
-        toast.classList.remove('hidden');
-        toastTimeout = setTimeout(() => {
-          toast.classList.add('hidden');
-        }, 3000);
-      }
+      /**    
+       * Mostra uma notificação toast (sem usar alert())    
+       */    
+      function showToast(message, type = 'success') {    
+        clearTimeout(toastTimeout);    
+        toastMessage.textContent = message;    
+        if (type === 'error') {    
+          toast.classList.remove('bg-cyan-600');    
+          toast.classList.add('bg-red-600');    
+        } else {    
+          toast.classList.remove('bg-red-600');    
+          toast.classList.add('bg-cyan-600');    
+        }    
+        toast.classList.remove('hidden');    
+        toastTimeout = setTimeout(() => {    
+          toast.classList.add('hidden');    
+        }, 3000);    
+      }    
 
-      /**
-       * Renderiza a tabela de contatos a partir do estado extractedContacts.
-       */
-      function renderTable() {
-        tableBody.innerHTML = '';
-        if (extractedContacts.length === 0) {
-          tableBody.appendChild(emptyRow);
-          exportBtn.disabled = true;
-          clearBtn.disabled = true;
-        } else {
-          extractedContacts.forEach((contact, index) => {
-            const tr = document.createElement('tr');
-            tr.className = 'hover:bg-slate-700/50 transition duration-150';
-            tr.innerHTML = `
-              <td class="p-3 align-top">${escapeHtml(contact.name)}</td>
-              <td class="p-3 align-top">${escapeHtml(contact.number)}</td>
-              <td class="p-3 align-top">${escapeHtml(contact.type)}</td>
-              <td class="p-3 align-top">${escapeHtml(contact.city)}</td>
-              <td class="p-3 text-center align-top">
-                <button class="delete-btn inline-flex items-center justify-center p-2 bg-transparent text-red-500 hover:text-white rounded-lg cursor-pointer" data-index="${index}" title="Excluir contato">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                    <line x1="14" y1="11" x2="14" y2="17"></line>
-                  </svg>
-                </button>
-              </td>
-            `;
-            tableBody.appendChild(tr);
-          });
-          exportBtn.disabled = false;
-          clearBtn.disabled = false;
-        }
-      }
+      /**    
+       * Renderiza a tabela de contatos a partir do estado extractedContacts.    
+       */    
+      function renderTable() {    
+        tableBody.innerHTML = '';    
+        if (extractedContacts.length === 0) {    
+          tableBody.appendChild(emptyRow);    
+          exportBtn.disabled = true;    
+          clearBtn.disabled = true;    
+        } else {    
+          extractedContacts.forEach((contact, index) => {    
+            const tr = document.createElement('tr');    
+            tr.className = 'hover:bg-slate-700/50 transition duration-150';    
+            tr.innerHTML = `    
+              <td class="p-3 align-top">${escapeHtml(contact.name)}</td>    
+              <td class="p-3 align-top">${escapeHtml(contact.number)}</td>    
+              <td class="p-3 align-top">${escapeHtml(contact.type)}</td>    
+              <td class="p-3 align-top">${escapeHtml(contact.city)}</td>    
+              <td class="p-3 text-center align-top">    
+                <button class="delete-btn inline-flex items-center justify-center p-2 bg-transparent text-red-500 hover:text-white rounded-lg cursor-pointer" data-index="${index}" title="Excluir contato">    
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">    
+                    <polyline points="3 6 5 6 21 6"></polyline>    
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>    
+                    <line x1="10" y1="11" x2="10" y2="17"></line>    
+                    <line x1="14" y1="11" x2="14" y2="17"></line>    
+                  </svg>    
+                </button>    
+              </td>    
+            `;    
+            tableBody.appendChild(tr);    
+          });    
+          exportBtn.disabled = false;    
+          clearBtn.disabled = false;    
+        }    
+      }    
 
-      /**
-       * Escapa HTML simples para evitar quebra da tabela
-       */
-      function escapeHtml(str) {
-        if (!str && str !== 0) return '';
-        return String(str)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      }
+      /**    
+       * Escapa HTML simples para evitar quebra da tabela    
+       */    
+      function escapeHtml(str) {    
+        if (!str && str !== 0) return '';    
+        return String(str)    
+          .replace(/&/g, '&amp;')    
+          .replace(/</g, '&lt;')    
+          .replace(/>/g, '&gt;')    
+          .replace(/"/g, '&quot;')    
+          .replace(/'/g, '&#39;');    
+      }    
 
-      /**
-       * Formata um número de telefone bruto para um padrão limpo.
-       */
-      function formatPhoneNumber(rawNumber) {
-        if (!rawNumber) return 'Não encontrado';
-        let digits = rawNumber.replace(/\D/g, '');
+      /**    
+       * Formata um número de telefone bruto para um padrão limpo.    
+       */    
+      function formatPhoneNumber(rawNumber) {    
+        if (!rawNumber) return 'Não encontrado';    
+        let digits = rawNumber.replace(/\D/g, '');    
 
-        // Remove zeros e prefixos errados
-        if (digits.length === 0) return 'Não encontrado';
+        // Remove zeros e prefixos errados    
+        if (digits.length === 0) return 'Não encontrado';    
 
-        // Se tiver DDD e não país
-        if (digits.length === 13 && digits.startsWith('55')) {
-          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,9) + '-' + digits.substring(9);
-        } else if (digits.length === 12 && digits.startsWith('55')) {
-          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,8) + '-' + digits.substring(8);
-        } else if (digits.length === 11 && digits.startsWith('0800')) {
-          return digits.substring(0,4) + ' ' + digits.substring(4,7) + ' ' + digits.substring(7);
-        } else if (digits.length === 11) {
-          // assume DDI omitted; adiciona +55
-          digits = '55' + digits;
-          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,9) + '-' + digits.substring(9);
-        } else if (digits.length === 10) {
-          digits = '55' + digits;
-          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,8) + '-' + digits.substring(8);
-        } else if (digits.length === 9) {
-          return digits.substring(0,5) + '-' + digits.substring(5);
-        } else if (digits.length === 8) {
-          return digits.substring(0,4) + '-' + digits.substring(4);
-        } else if (digits.length > 0 && digits.length <= 7) {
-          return digits; // formato curto
-        } else {
-          // Caso comprimentos estranhos, tenta inferir
-          if (digits.startsWith('55')) {
-            const rest = digits.substring(2);
-            if (rest.length === 11) return '+' + digits.substring(0,2) + ' ' + rest.substring(0,2) + ' ' + rest.substring(2,7) + '-' + rest.substring(7);
-          }
-          return rawNumber.trim();
-        }
-      }
+        // Se tiver DDD e não país    
+        if (digits.length === 13 && digits.startsWith('55')) {    
+          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,9) + '-' + digits.substring(9);    
+        } else if (digits.length === 12 && digits.startsWith('55')) {    
+          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,8) + '-' + digits.substring(8);    
+        } else if (digits.length === 11 && digits.startsWith('0800')) {    
+          return digits.substring(0,4) + ' ' + digits.substring(4,7) + ' ' + digits.substring(7);    
+        } else if (digits.length === 11) {    
+          // assume DDI omitido; adiciona +55    
+          digits = '55' + digits;    
+          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,9) + '-' + digits.substring(9);    
+        } else if (digits.length === 10) {    
+          digits = '55' + digits;    
+          return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,8) + '-' + digits.substring(8);    
+        } else if (digits.length === 9) {    
+          return digits.substring(0,5) + '-' + digits.substring(5);    
+        } else if (digits.length === 8) {    
+          return digits.substring(0,4) + '-' + digits.substring(4);    
+        } else if (digits.length > 0 && digits.length <= 7) {    
+          return digits; // formato curto    
+        } else {    
+          // Caso comprimentos estranhos, tenta inferir    
+          if (digits.startsWith('55')) {    
+            const rest = digits.substring(2);    
+            if (rest.length === 11) return '+' + digits.substring(0,2) + ' ' + rest.substring(0,2) + ' ' + rest.substring(2,7) + '-' + rest.substring(7);    
+          }    
+          return rawNumber.trim();    
+        }    
+      }    
 
-      /**
-       * Tenta interpretar linhas simples no formato:
-       * Nome: +55 86 99934-5970
-       * ou "Nome - telefone" ou mesmo "Nome ... telefone".
-       * Retorna {name, number} ou null se não for esse caso.
-       */
-      function parseShortLine(line) {
-        const trimmed = line.trim();
-        if (!trimmed) return null;
+      /**    
+       * Tenta interpretar linhas simples no formato:    
+       * Nome: +55 86 99934-5970    
+       * ou "Nome - telefone" ou mesmo "Nome ... telefone".    
+       * Retorna {name, number} ou null se não for esse caso.    
+       */    
+      function parseShortLine(line) {    
+        const trimmed = line.trim();    
+        if (!trimmed) return null;    
 
-        // Primeiro: busca por um número na linha
-        const phoneMatch = trimmed.match(phoneRegex);
-        if (!phoneMatch) return null;
+        // Primeiro: busca por um número na linha    
+        const phoneMatch = trimmed.match(phoneRegex);    
+        if (!phoneMatch) return null;    
 
-        // Se houver dois grupos (ex: "Nome: numero"), tenta usar separador
-        const sepMatch = trimmed.match(simpleContactRegex);
-        if (sepMatch) {
-          const maybeName = sepMatch[1].trim();
-          const maybePhonePart = sepMatch[2].trim();
-          const phoneFound = maybePhonePart.match(phoneRegex);
-          if (maybeName && phoneFound) {
-            return { name: maybeName, number: phoneFound[0] };
-          }
-        }
+        // Se houver dois grupos (ex: "Nome: numero"), tenta usar separador    
+        const sepMatch = trimmed.match(/^(.{1,120}?)\s*[:\-–]\s*(.+)$/);    
+        if (sepMatch) {    
+          const maybeName = sepMatch[1].trim();    
+          const maybePhonePart = sepMatch[2].trim();    
+          const phoneFound = maybePhonePart.match(phoneRegex);    
+          if (maybeName && phoneFound) {    
+            return { name: maybeName, number: phoneFound[0] };    
+          }    
+        }    
 
-        // Senão: pega o primeiro número detectado e assume que tudo antes é o nome
-        const firstPhone = phoneMatch[0];
-        const idx = trimmed.indexOf(firstPhone);
-        if (idx > 0) {
-          const namePart = trimmed.substring(0, idx).replace(/[:\-–]+$/,'').trim();
-          if (namePart.length >= 2) {
-            return { name: namePart, number: firstPhone };
-          }
-        }
+        // Senão: pega o primeiro número detectado e assume que tudo antes é o nome    
+        const firstPhone = phoneMatch[0];    
+        const idx = trimmed.indexOf(firstPhone);    
+        if (idx > 0) {    
+          const namePart = trimmed.substring(0, idx).replace(/[:\-–]+$/,'').trim();    
+          if (namePart.length >= 2) {    
+            return { name: namePart, number: firstPhone };    
+          }    
+        }    
 
-        return null;
-      }
+        return null;    
+      }    
 
-      /**
-       * Tenta extrair o nome e o telefone de um *único bloco* de texto.
-       * Mantém a lógica já existente (procura por linha de avaliações etc.).
-       * @param {string} text - O bloco de texto de um estabelecimento.
-       * @returns {object} - { name, number }
-       */
-      function parseData(text) {
-        let name = 'Não encontrado';
-        let number = 'Não encontrado';
-        const lines = text.split('\n').map(l => l.trim()).filter(line => line !== '');
+      /**    
+       * Tenta extrair o nome e o telefone de um *único bloco* de texto.    
+       * @param {string} text - O bloco de texto de um estabelecimento.    
+       * @returns {object} - { name, number }    
+       */    
+      function parseData(text) {    
+        let name = 'Não encontrado';    
+        let number = 'Não encontrado';    
 
-        // 0) Tenta detectar linhas curtas no formato "Nome: telefone" — varre cada linha
-        for (let l of lines) {
-          const short = parseShortLine(l);
-          if (short) {
-            name = short.name;
-            number = formatPhoneNumber(short.number);
-            return { name, number };
-          }
-        }
+        // Normaliza quebras estranhas e espaços não imprimíveis    
+        const normalizedText = text
+          .replace(/\r/g, '\n')
+          .replace(/\u00A0/g, ' ')
+          .replace(/\n{2,}/g, '\n\n');
 
-        // 1) CORREÇÃO: Encontrar o nome do estabelecimento usando a linha de avaliação
-        const avalIndex = lines.findIndex(l => l.toLowerCase().includes('avalia'));
-        if (avalIndex > 0) {
-          // Procura para trás a partir da linha de avaliação para encontrar o nome
-          for (let i = avalIndex - 1; i >= 0; i--) {
-            const candidate = lines[i].trim();
-            if (candidate.length > 1 && !junkRegex.test(candidate) && !ratingRegex.test(candidate) && candidate.toLowerCase() !== tipoInput.value.toLowerCase() && !candidate.toLowerCase().includes('rotas') && !candidate.toLowerCase().includes('iniciar') && !candidate.toLowerCase().includes('ligar') && !candidate.toLowerCase().includes('salvar') && !candidate.toLowerCase().includes('compartilhar')) {
-              name = candidate;
-              break;
-            }
-          }
-        }
+        const lines = normalizedText
+          .split('\n')
+          .map(l => l.trim())
+          .filter(line => line !== '');    
 
-        // 2) Tentar encontrar o Telefone no bloco (primeira ocorrência válida)
-        const phoneMatch = text.match(phoneRegex);
-        if (phoneMatch) {
-          number = formatPhoneNumber(phoneMatch[0]);
-        }
+        // 0) Tenta detectar linhas curtas no formato "Nome: telefone" — varre cada linha    
+        for (let l of lines) {    
+          const short = parseShortLine(l);    
+          if (short) {    
+            name = short.name;    
+            number = formatPhoneNumber(short.number);    
+            return { name, number };    
+          }    
+        }    
 
-        // 3) Se não achou nome, tenta usar a primeira linha como nome (se parecer plausível)
-        if (name === 'Não encontrado' && lines.length > 0) {
-          const first = lines[0];
-          if (first && !junkRegex.test(first) && !ratingRegex.test(first) && first.length > 1) {
-            // Se primeira linha contém o telefone, não usamos ela como nome
-            if (!phoneRegex.test(first)) {
-              name = first;
-            } else {
-              // tenta extrair texto antes do telefone
-              const match = first.match(/^(.*?)\s*(?:\+?55|\(?\d{2}\)?)/);
-              if (match && match[1] && match[1].trim().length > 1) {
-                name = match[1].trim();
-              }
-            }
-          }
-        }
+        // 1) Encontrar o nome do estabelecimento usando a linha que contém "avalia"
+        //    Ex.: 
+        //    Lanchonete Siri Cascudo
+        //    4,3 40 avaliações
+        const avalIndex = lines.findIndex(l => l.toLowerCase().includes('avalia'));    
 
-        return { name, number };
-      }
+        if (avalIndex > 0) {    
+          // Procura para trás a partir da linha de avaliação para encontrar o nome    
+          for (let i = avalIndex - 1; i >= 0; i--) {    
+            const candidate = lines[i].trim();    
 
-      /**
-       * Detecta se o texto é uma lista simples de contatos (formato "Nome: telefone")
-       * @param {string} text - O texto a ser analisado
-       * @returns {boolean} - True se parece ser uma lista simples
-       */
-      function isSimpleContactList(text) {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
-        if (lines.length < 2) return false;
-        
-        let contactLines = 0;
-        let totalLines = 0;
-        
-        for (let line of lines) {
-          if (line.trim() === '') continue;
-          totalLines++;
-          if (parseShortLine(line)) {
-            contactLines++;
-          }
-        }
-        
-        // Considera como lista simples se pelo menos 50% das linhas são contatos válidos
-        return totalLines > 0 && (contactLines / totalLines) >= 0.5;
-      }
+            // ignora se for vazio, lixo, rating puro etc.    
+            if (
+              candidate.length > 1 &&
+              !junkRegex.test(candidate) &&
+              !ratingRegex.test(candidate) &&
+              candidate.toLowerCase() !== tipoInput.value.toLowerCase() &&
+              !candidate.toLowerCase().includes('rotas') &&
+              !candidate.toLowerCase().includes('iniciar') &&
+              !candidate.toLowerCase().includes('ligar') &&
+              !candidate.toLowerCase().includes('salvar') &&
+              !candidate.toLowerCase().includes('compartilhar')
+            ) {    
+              name = candidate;    
+              break;    
+            }    
+          }    
+        }    
 
-      /**
-       * Lida com o envio do formulário (botão "Processar").
-       * Processa múltiplos blocos separados por "Sobre esses dados".
-       */
-      function handleFormSubmit(e) {
-        e.preventDefault();
-        const rawText = rawDataInput.value.trim();
-        const tipo = tipoInput.value.trim();
-        const cidade = cidadeInput.value.trim();
+        // 2) Tentar encontrar o Telefone no bloco (primeira ocorrência válida)    
+        const phoneMatch = normalizedText.match(phoneRegex);    
+        if (phoneMatch) {    
+          number = formatPhoneNumber(phoneMatch[0]);    
+        }    
 
-        // Validações principais
-        if (!rawText) {
-          showToast('Por favor, cole os dados brutos.', 'error');
-          rawDataInput.focus();
-          return;
-        }
-        if (!tipo) {
-          showToast('Por favor, informe o Tipo.', 'error');
-          tipoInput.focus();
-          return;
-        }
-        if (!cidade) {
-          showToast('Por favor, informe a Cidade.', 'error');
-          cidadeInput.focus();
-          return;
-        }
+        // 3) Se não achou nome, tenta usar a primeira linha como nome (se parecer plausível)    
+        if (name === 'Não encontrado' && lines.length > 0) {    
+          const first = lines[0];    
+          if (first && !junkRegex.test(first) && !ratingRegex.test(first) && first.length > 1) {    
+            // Se primeira linha contém o telefone, não usamos ela como nome    
+            if (!phoneRegex.test(first)) {    
+              name = first;    
+            } else {    
+              // tenta extrair texto antes do telefone    
+              const match = first.match(/^(.*?)\s*(?:\+?55|?\d{2}?)/);    
+              if (match && match[1] && match[1].trim().length > 1) {    
+                name = match[1].trim();    
+              }    
+            }    
+          }    
+        }    
 
-        // --- LÓGICA DE PROCESSAMENTO EM LOTE ---
-        let contatosAdicionados = 0;
+        return { name, number };    
+      }    
 
-        // Verifica se é uma lista simples de contatos
-        if (isSimpleContactList(rawText)) {
-          // Processa como lista simples
-          const lines = rawText.split('\n').map(l => l.trim()).filter(l => l !== '');
-          
-          lines.forEach(line => {
-            const short = parseShortLine(line);
-            if (short) {
-              const { name, number } = short;
-              if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
-                extractedContacts.push({ 
-                  name: name, 
-                  number: formatPhoneNumber(number), 
-                  type: tipo, 
-                  city: cidade 
-                });
-                contatosAdicionados++;
-              }
-            }
-          });
-        } else {
-          // Processa como blocos do Google Maps
-          // 1. Divide o texto bruto em blocos usando "Sobre esses dados" como divisor
-          const blocosDeTexto = rawText.split('Sobre esses dados');
-          
-          // 2. Itera sobre cada bloco
-          blocosDeTexto.forEach(bloco => {
-            if (bloco.trim().length < 3) return; // Ignora blocos pequenos ou vazios
+      /**    
+       * Lida com o envio do formulário (botão "Processar").    
+       * Processa múltiplos blocos separados por "Sobre esses dados".    
+       */    
+      function handleFormSubmit(e) {    
+        e.preventDefault();    
+        const rawText = rawDataInput.value.trim();    
+        const tipo = tipoInput.value.trim();    
+        const cidade = cidadeInput.value.trim();    
 
-            // Se o bloco contém múltiplas linhas no estilo curto (Nome: numero) vamos processar linha a linha
-            const linhas = bloco.split('\n').map(l => l.trim()).filter(l => l !== '');
+        // Validações principais    
+        if (!rawText) {    
+          showToast('Por favor, cole os dados brutos.', 'error');    
+          rawDataInput.focus();    
+          return;    
+        }    
+        if (!tipo) {    
+          showToast('Por favor, informe o Tipo.', 'error');    
+          tipoInput.focus();    
+          return;    
+        }    
+        if (!cidade) {    
+          showToast('Por favor, informe a Cidade.', 'error');    
+          cidadeInput.focus();    
+          return;    
+        }    
 
-            // Se o bloco parecer conter várias linhas do tipo curto, itera as linhas
-            const linesWithPhone = linhas.filter(l => phoneRegex.test(l));
+        // --- LÓGICA DE PROCESSAMENTO EM LOTE ---    
+        // 1. Divide o texto bruto em blocos usando "Sobre esses dados" como divisor    
+        const blocosDeTexto = rawText.split('Sobre esses dados');    
+        let contatosAdicionados = 0;    
 
-            if (linesWithPhone.length >= 1) {
-              // Para blocos curtos, processa cada linha isoladamente — isso permite colar listas simples como no exemplo
-              linhas.forEach(line => {
-                const short = parseShortLine(line);
-                if (short) {
-                  const { name, number } = short;
-                  if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
-                    extractedContacts.push({ 
-                      name: name, 
-                      number: formatPhoneNumber(number), 
-                      type: tipo, 
-                      city: cidade 
-                    });
-                    contatosAdicionados++;
-                  }
-                } else {
-                  // Se não for linha curta, tenta parsear como bloco inteiro
-                  const parsed = parseData(line);
-                  if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
-                    extractedContacts.push({ 
-                      name: parsed.name, 
-                      number: parsed.number, 
-                      type: tipo, 
-                      city: cidade 
-                    });
-                    contatosAdicionados++;
-                  }
-                }
-              });
-            } else {
-              // Processa o bloco inteiro com a lógica existente
-              const { name, number } = parseData(bloco);
-              if (name !== 'Não encontrado' || number !== 'Não encontrado') {
-                extractedContacts.push({ 
-                  name: name, 
-                  number: number, 
-                  type: tipo, 
-                  city: cidade 
-                });
-                contatosAdicionados++;
-              }
-            }
-          });
-        }
+        // 2. Itera sobre cada bloco    
+        blocosDeTexto.forEach(bloco => {    
+          if (bloco.trim().length < 3) return; // Ignora blocos pequenos ou vazios    
 
-        // 5. Feedback final e atualização da UI
-        if (contatosAdicionados > 0) {
-          renderTable();
-          showToast(`${contatosAdicionados} contatos adicionados com sucesso!`, 'success');
-          rawDataInput.value = ''; // Limpa o input
-        } else {
-          showToast('Não foi possível encontrar nenhum contato válido no texto.', 'error');
-        }
-      }
+          // Se o bloco contém múltiplas linhas no estilo curto (Nome: numero) vamos processar linha a linha    
+          const linhas = bloco
+            .replace(/\r/g, '\n')
+            .replace(/\u00A0/g, ' ')
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l !== '');    
 
-      /**
-       * Lida com o clique no botão "Exportar CSV".
-       */
-      function handleExportCSV() {
-        if (extractedContacts.length === 0) {
-          showToast('Não há dados para exportar.', 'error');
-          return;
-        }
-        const headers = ['Nome', 'Numero', 'Tipo', 'Cidade'];
-        let csvContent = headers.join(',') + '\n';
-        extractedContacts.forEach(contact => {
-          const row = [contact.name, contact.number, contact.type, contact.city].map(v => '"' + String(v || '').replace(/"/g, '""') + '"');
-          csvContent += row.join(',') + '\n';
-        });
+          // Verifica quantas linhas têm telefone    
+          const linesWithPhone = linhas.filter(l => phoneRegex.test(l));    
 
-        // \uFEFF é o BOM (Byte Order Mark) para garantir compatibilidade com Excel
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'contatos_maps.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast('CSV exportado com sucesso!', 'success');
-      }
+          // Agora processa qualquer quantidade (contagem "infinita")    
+          if (linesWithPhone.length >= 1) {    
+            linhas.forEach(line => {    
+              const short = parseShortLine(line);    
+              if (short) {    
+                const { name, number } = short;    
+                if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {    
+                  extractedContacts.push({ 
+                    name: name, 
+                    number: formatPhoneNumber(number), 
+                    type: tipo, 
+                    city: cidade 
+                  });    
+                  contatosAdicionados++;    
+                }    
+              } else {    
+                // Se não for linha curta, tenta parsear como bloco inteiro    
+                const parsed = parseData(line);    
+                if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {    
+                  extractedContacts.push({ 
+                    name: parsed.name, 
+                    number: parsed.number, 
+                    type: tipo, 
+                    city: cidade 
+                  });    
+                  contatosAdicionados++;    
+                }    
+              }    
+            });    
+          } else {    
+            // Processa o bloco inteiro com a lógica principal (nome antes de "avaliações")    
+            const { name, number } = parseData(bloco);    
+            if (name !== 'Não encontrado' || number !== 'Não encontrado') {    
+              extractedContacts.push({ 
+                name: name, 
+                number: number, 
+                type: tipo, 
+                city: cidade 
+              });    
+              contatosAdicionados++;    
+            }    
+          }    
+        });    
 
-      /**
-       * Lida com o clique no botão "Limpar Lista".
-       */
-      function handleClearList() {
-        extractedContacts = [];
-        renderTable();
-        showToast('Lista de contatos limpa.', 'success');
-      }
+        // 5. Feedback final e atualização da UI    
+        if (contatosAdicionados > 0) {    
+          renderTable();    
+          showToast(`${contatosAdicionados} contatos adicionados com sucesso!`, 'success');    
+          rawDataInput.value = ''; // Limpa o input    
+        } else {    
+          showToast('Não foi possível encontrar nenhum contato válido no texto.', 'error');    
+        }    
+      }    
 
-      /**
-       * Lida com cliques na tabela (para exclusão de linhas).
-       */
-      function handleTableClick(e) {
-        const deleteButton = e.target.closest('.delete-btn');
-        if (deleteButton) {
-          const index = parseInt(deleteButton.getAttribute('data-index'), 10);
-          if (!isNaN(index)) {
-            extractedContacts.splice(index, 1);
-            renderTable();
-            showToast('Contato removido.', 'success');
-          }
-        }
-      }
+      /**    
+       * Lida com o clique no botão "Exportar CSV".    
+       */    
+      function handleExportCSV() {    
+        if (extractedContacts.length === 0) {    
+          showToast('Não há dados para exportar.', 'error');    
+          return;    
+        }    
 
-      // --- Adiciona os Event Listeners ---
-      form.addEventListener('submit', handleFormSubmit);
-      exportBtn.addEventListener('click', handleExportCSV);
-      clearBtn.addEventListener('click', handleClearList);
-      tableBody.addEventListener('click', handleTableClick); // Um listener no <tbody>
+        const headers = ['Nome', 'Numero', 'Tipo', 'Cidade'];    
+        let csvContent = headers.join(',') + '\n';    
 
-      // Inicializa a tabela no estado vazio
-      renderTable();
+        extractedContacts.forEach(contact => {    
+          const row = [contact.name, contact.number, contact.type, contact.city]
+            .map(v => '"' + String(v || '').replace(/"/g, '""') + '"');    
+          csvContent += row.join(',') + '\n';    
+        });    
 
+        // \uFEFF é o BOM (Byte Order Mark) para garantir compatibilidade com Excel    
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });    
+        const link = document.createElement('a');    
+        const url = URL.createObjectURL(blob);    
+        link.setAttribute('href', url);    
+        link.setAttribute('download', 'contatos_maps.csv');    
+        link.style.visibility = 'hidden';    
+        document.body.appendChild(link);    
+        link.click();    
+        document.body.removeChild(link);    
+        showToast('CSV exportado com sucesso!', 'success');    
+      }    
+
+      /**    
+       * Lida com o clique no botão "Limpar Lista".    
+       */    
+      function handleClearList() {    
+        extractedContacts = [];    
+        renderTable();    
+        showToast('Lista de contatos limpa.', 'success');    
+      }    
+
+      /**    
+       * Lida com cliques na tabela (para exclusão de linhas).    
+       */    
+      function handleTableClick(e) {    
+        const deleteButton = e.target.closest('.delete-btn');    
+        if (deleteButton) {    
+          const index = parseInt(deleteButton.getAttribute('data-index'), 10);    
+          if (!isNaN(index)) {    
+            extractedContacts.splice(index, 1);    
+            renderTable();    
+            showToast('Contato removido.', 'success');    
+          }    
+        }    
+      }    
+
+      // --- Adiciona os Event Listeners ---    
+      form.addEventListener('submit', handleFormSubmit);    
+      exportBtn.addEventListener('click', handleExportCSV);    
+      clearBtn.addEventListener('click', handleClearList);    
+      tableBody.addEventListener('click', handleTableClick); // Um listener no <tbody>    
+
+      // Inicializa a tabela no estado vazio    
+      renderTable();    
     });
-  </script>
+  </script>  
+
 </body>
 </html>
