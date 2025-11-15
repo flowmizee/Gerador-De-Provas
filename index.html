@@ -22,7 +22,6 @@
     }    
   </style>    
 </head>    
-
 <body class="bg-slate-900 text-slate-200 min-h-screen p-6">    
 
   <!-- Toast Notification (para feedback, sem usar alert()) -->    
@@ -56,45 +55,24 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">    
             <div>    
               <label for="tipo" class="block text-sm font-medium text-slate-300 mb-2">Tipo de Estabelecimento</label>    
-              <input 
-                type="text" 
-                id="tipo" 
-                name="tipo" 
-                placeholder="Ex: Restaurante, Padaria..." 
-                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-              >    
+              <input type="text" id="tipo" name="tipo" placeholder="Ex: Restaurante, Padaria..." class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition">    
             </div>    
             <div>    
               <label for="cidade" class="block text-sm font-medium text-slate-300 mb-2">Cidade</label>    
-              <input 
-                type="text" 
-                id="cidade" 
-                name="cidade" 
-                placeholder="Ex: Angical do Piauí" 
-                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-              >    
+              <input type="text" id="cidade" name="cidade" placeholder="Ex: Angical do Piauí" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition">    
             </div>    
           </div>    
 
           <!-- Área de Texto para Dados Brutos -->    
           <div>    
             <label for="raw-data" class="block text-sm font-medium text-slate-300 mb-2">Dados Brutos (Cole aqui)</label>    
-            <textarea 
-              id="raw-data" 
-              name="raw-data" 
-              rows="10" 
-              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" 
-              placeholder="Cole o bloco de texto copiado do Google Maps aqui...
+            <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...
 Pode colar vários estabelecimentos de uma vez.
 O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>    
           </div>    
 
           <!-- Botão de Processar -->    
-          <button 
-            type="submit" 
-            id="process-btn" 
-            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1"
-          >    
+          <button type="submit" id="process-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1">    
             <!-- Ícone SVG para "Processar" -->    
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
               <polyline points="23 4 23 10 17 10"></polyline>
@@ -144,11 +122,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
 
         <!-- Botões de Ação da Tabela -->    
         <div class="mt-6 flex flex-col sm:flex-row gap-4">    
-          <button 
-            id="export-btn" 
-            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" 
-            disabled
-          >    
+          <button id="export-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" disabled>    
             <!-- Ícone SVG para "Exportar" -->    
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -157,12 +131,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
             </svg>    
             Exportar CSV    
           </button>    
-
-          <button 
-            id="clear-btn" 
-            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" 
-            disabled
-          >    
+          <button id="clear-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center transition duration-300 ease-in-out transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none" disabled>    
             <!-- Ícone SVG para "Limpar" -->    
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
               <polyline points="3 6 5 6 21 6"></polyline>
@@ -204,7 +173,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
       // Lixo comum encontrado no topo do texto colado    
       const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Street View|Resumo de avaliações|R\.|Av\.|Avenida|Travessa|Alameda|Praça|Largo|Vila|Bairro|Centro|Zona|Rod\.|Rodovia|BR-|Estrada)$/i;    
 
-      // Regex para verificar se a linha é só nota (ex: "4,4" ou "4.4" ou "4" ou "40")    
+      // Regex para verificar se a linha é basicamente uma nota (ex: "4,4" ou "4.4" ou "4" ou "40")    
       const ratingRegex = /^(\d{1,2}([,.]\d)?|\d{1,3}([,.]\d{1,2})?)$/;    
 
       // --- Funções ---    
@@ -284,10 +253,8 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         if (!rawNumber) return 'Não encontrado';    
         let digits = rawNumber.replace(/\D/g, '');    
 
-        // Remove zeros e prefixos errados    
         if (digits.length === 0) return 'Não encontrado';    
 
-        // Se tiver DDD e não país    
         if (digits.length === 13 && digits.startsWith('55')) {    
           return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,9) + '-' + digits.substring(9);    
         } else if (digits.length === 12 && digits.startsWith('55')) {    
@@ -295,7 +262,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         } else if (digits.length === 11 && digits.startsWith('0800')) {    
           return digits.substring(0,4) + ' ' + digits.substring(4,7) + ' ' + digits.substring(7);    
         } else if (digits.length === 11) {    
-          // assume DDI omitido; adiciona +55    
           digits = '55' + digits;    
           return '+' + digits.substring(0,2) + ' ' + digits.substring(2,4) + ' ' + digits.substring(4,9) + '-' + digits.substring(9);    
         } else if (digits.length === 10) {    
@@ -306,9 +272,8 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         } else if (digits.length === 8) {    
           return digits.substring(0,4) + '-' + digits.substring(4);    
         } else if (digits.length > 0 && digits.length <= 7) {    
-          return digits; // formato curto    
+          return digits;    
         } else {    
-          // Caso comprimentos estranhos, tenta inferir    
           if (digits.startsWith('55')) {    
             const rest = digits.substring(2);    
             if (rest.length === 11) return '+' + digits.substring(0,2) + ' ' + rest.substring(0,2) + ' ' + rest.substring(2,7) + '-' + rest.substring(7);    
@@ -327,11 +292,9 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         const trimmed = line.trim();    
         if (!trimmed) return null;    
 
-        // Primeiro: busca por um número na linha    
         const phoneMatch = trimmed.match(phoneRegex);    
         if (!phoneMatch) return null;    
 
-        // Se houver dois grupos (ex: "Nome: numero"), tenta usar separador    
         const sepMatch = trimmed.match(/^(.{1,120}?)\s*[:\-–]\s*(.+)$/);    
         if (sepMatch) {    
           const maybeName = sepMatch[1].trim();    
@@ -342,7 +305,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           }    
         }    
 
-        // Senão: pega o primeiro número detectado e assume que tudo antes é o nome    
         const firstPhone = phoneMatch[0];    
         const idx = trimmed.indexOf(firstPhone);    
         if (idx > 0) {    
@@ -356,15 +318,13 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
       }    
 
       /**    
-       * Tenta extrair o nome e o telefone de um *único bloco* de texto.    
-       * @param {string} text - O bloco de texto de um estabelecimento.    
-       * @returns {object} - { name, number }    
+       * Tenta extrair o nome e o telefone de um *único bloco* de texto (página de estabelecimento).    
+       * Nome = linha imediatamente anterior à linha que contém "avalia" (ex: "4,2 10 avaliações").    
        */    
       function parseData(text) {    
         let name = 'Não encontrado';    
         let number = 'Não encontrado';    
 
-        // Normaliza quebras estranhas e espaços não imprimíveis    
         const normalizedText = text
           .replace(/\r/g, '\n')
           .replace(/\u00A0/g, ' ')
@@ -375,7 +335,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           .map(l => l.trim())
           .filter(line => line !== '');    
 
-        // 0) Tenta detectar linhas curtas no formato "Nome: telefone" — varre cada linha    
+        // 0) Tenta detectar linhas simples "Nome: telefone" no bloco inteiro    
         for (let l of lines) {    
           const short = parseShortLine(l);    
           if (short) {    
@@ -385,18 +345,12 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           }    
         }    
 
-        // 1) Encontrar o nome do estabelecimento usando a linha que contém "avalia"
-        //    Ex.: 
-        //    Lanchonete Siri Cascudo
-        //    4,3 40 avaliações
+        // 1) Nome: linha anterior à que contém "avalia"    
         const avalIndex = lines.findIndex(l => l.toLowerCase().includes('avalia'));    
-
         if (avalIndex > 0) {    
-          // Procura para trás a partir da linha de avaliação para encontrar o nome    
           for (let i = avalIndex - 1; i >= 0; i--) {    
             const candidate = lines[i].trim();    
 
-            // ignora se for vazio, lixo, rating puro etc.    
             if (
               candidate.length > 1 &&
               !junkRegex.test(candidate) &&
@@ -414,21 +368,19 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           }    
         }    
 
-        // 2) Tentar encontrar o Telefone no bloco (primeira ocorrência válida)    
+        // 2) Telefone: primeira ocorrência válida no bloco    
         const phoneMatch = normalizedText.match(phoneRegex);    
         if (phoneMatch) {    
           number = formatPhoneNumber(phoneMatch[0]);    
         }    
 
-        // 3) Se não achou nome, tenta usar a primeira linha como nome (se parecer plausível)    
+        // 3) Plano B pro nome: tenta primeira linha, se ainda não achou    
         if (name === 'Não encontrado' && lines.length > 0) {    
           const first = lines[0];    
           if (first && !junkRegex.test(first) && !ratingRegex.test(first) && first.length > 1) {    
-            // Se primeira linha contém o telefone, não usamos ela como nome    
             if (!phoneRegex.test(first)) {    
               name = first;    
             } else {    
-              // tenta extrair texto antes do telefone    
               const match = first.match(/^(.*?)\s*(?:\+?55|?\d{2}?)/);    
               if (match && match[1] && match[1].trim().length > 1) {    
                 name = match[1].trim();    
@@ -450,7 +402,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         const tipo = tipoInput.value.trim();    
         const cidade = cidadeInput.value.trim();    
 
-        // Validações principais    
         if (!rawText) {    
           showToast('Por favor, cole os dados brutos.', 'error');    
           rawDataInput.focus();    
@@ -467,75 +418,94 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           return;    
         }    
 
-        // --- LÓGICA DE PROCESSAMENTO EM LOTE ---    
-        // 1. Divide o texto bruto em blocos usando "Sobre esses dados" como divisor    
+        // Divide o texto bruto em blocos usando "Sobre esses dados" como divisor    
         const blocosDeTexto = rawText.split('Sobre esses dados');    
         let contatosAdicionados = 0;    
 
-        // 2. Itera sobre cada bloco    
         blocosDeTexto.forEach(bloco => {    
-          if (bloco.trim().length < 3) return; // Ignora blocos pequenos ou vazios    
+          if (bloco.trim().length < 3) return;    
 
-          // Se o bloco contém múltiplas linhas no estilo curto (Nome: numero) vamos processar linha a linha    
-          const linhas = bloco
+          const normalizedBlock = bloco
             .replace(/\r/g, '\n')
-            .replace(/\u00A0/g, ' ')
+            .replace(/\u00A0/g, ' ');
+
+          const linhas = normalizedBlock
             .split('\n')
             .map(l => l.trim())
             .filter(l => l !== '');    
 
-          // Verifica quantas linhas têm telefone    
-          const linesWithPhone = linhas.filter(l => phoneRegex.test(l));    
+          // --- LÓGICA AJUSTADA ---    
+          // Regra: 
+          // 1) Se o bloco aparenta ser uma PÁGINA DO MAPS (tem "avalia" ou "Resumo de avaliações"),
+          //    então ele deve contar APENAS 1 contato:
+          //    - Nome = linha antes de "avaliações"
+          //    - Telefone = primeiro telefone do bloco
+          const isMapsPage = normalizedBlock.toLowerCase().includes('avalia') ||
+                             normalizedBlock.toLowerCase().includes('resumo de avaliações');
 
-          // Agora processa qualquer quantidade (contagem "infinita")    
-          if (linesWithPhone.length >= 1) {    
-            linhas.forEach(line => {    
-              const short = parseShortLine(line);    
-              if (short) {    
-                const { name, number } = short;    
-                if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {    
-                  extractedContacts.push({ 
-                    name: name, 
-                    number: formatPhoneNumber(number), 
-                    type: tipo, 
-                    city: cidade 
-                  });    
-                  contatosAdicionados++;    
-                }    
-              } else {    
-                // Se não for linha curta, tenta parsear como bloco inteiro    
-                const parsed = parseData(line);    
-                if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {    
-                  extractedContacts.push({ 
-                    name: parsed.name, 
-                    number: parsed.number, 
-                    type: tipo, 
-                    city: cidade 
-                  });    
-                  contatosAdicionados++;    
-                }    
-              }    
-            });    
-          } else {    
-            // Processa o bloco inteiro com a lógica principal (nome antes de "avaliações")    
-            const { name, number } = parseData(bloco);    
-            if (name !== 'Não encontrado' || number !== 'Não encontrado') {    
-              extractedContacts.push({ 
-                name: name, 
-                number: number, 
-                type: tipo, 
-                city: cidade 
+          if (isMapsPage) {    
+            // Trata SEMPRE como 1 estabelecimento    
+            const parsed = parseData(normalizedBlock);    
+            if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {    
+              extractedContacts.push({    
+                name: parsed.name,    
+                number: parsed.number,    
+                type: tipo,    
+                city: cidade    
               });    
               contatosAdicionados++;    
+            }    
+          } else {    
+            // Caso NÃO seja uma página de Maps,
+            // mantemos a lógica de lista (Nome: Telefone, etc.)    
+            const linesWithPhone = linhas.filter(l => phoneRegex.test(l));    
+
+            if (linesWithPhone.length >= 1) {    
+              linhas.forEach(line => {    
+                const short = parseShortLine(line);    
+                if (short) {    
+                  const { name, number } = short;    
+                  if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {    
+                    extractedContacts.push({    
+                      name: name,    
+                      number: formatPhoneNumber(number),    
+                      type: tipo,    
+                      city: cidade    
+                    });    
+                    contatosAdicionados++;    
+                  }    
+                } else {    
+                  const parsed = parseData(line);    
+                  if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {    
+                    extractedContacts.push({    
+                      name: parsed.name,    
+                      number: parsed.number,    
+                      type: tipo,    
+                      city: cidade    
+                    });    
+                    contatosAdicionados++;    
+                  }    
+                }    
+              });    
+            } else {    
+              const parsed = parseData(normalizedBlock);    
+              if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {    
+                extractedContacts.push({    
+                  name: parsed.name,    
+                  number: parsed.number,    
+                  type: tipo,    
+                  city: cidade    
+                });    
+                contatosAdicionados++;    
+              }    
             }    
           }    
         });    
 
-        // 5. Feedback final e atualização da UI    
         if (contatosAdicionados > 0) {    
           renderTable();    
           showToast(`${contatosAdicionados} contatos adicionados com sucesso!`, 'success');    
-          rawDataInput.value = ''; // Limpa o input    
+          rawDataInput.value = '';    
         } else {    
           showToast('Não foi possível encontrar nenhum contato válido no texto.', 'error');    
         }    
@@ -549,17 +519,13 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           showToast('Não há dados para exportar.', 'error');    
           return;    
         }    
-
         const headers = ['Nome', 'Numero', 'Tipo', 'Cidade'];    
         let csvContent = headers.join(',') + '\n';    
-
         extractedContacts.forEach(contact => {    
-          const row = [contact.name, contact.number, contact.type, contact.city]
-            .map(v => '"' + String(v || '').replace(/"/g, '""') + '"');    
+          const row = [contact.name, contact.number, contact.type, contact.city].map(v => '"' + String(v || '').replace(/"/g, '""') + '"');    
           csvContent += row.join(',') + '\n';    
         });    
 
-        // \uFEFF é o BOM (Byte Order Mark) para garantir compatibilidade com Excel    
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });    
         const link = document.createElement('a');    
         const url = URL.createObjectURL(blob);    
@@ -600,11 +566,12 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
       form.addEventListener('submit', handleFormSubmit);    
       exportBtn.addEventListener('click', handleExportCSV);    
       clearBtn.addEventListener('click', handleClearList);    
-      tableBody.addEventListener('click', handleTableClick); // Um listener no <tbody>    
+      tableBody.addEventListener('click', handleTableClick);    
 
       // Inicializa a tabela no estado vazio    
       renderTable();    
-    });
+
+    });    
   </script>  
 
 </body>
