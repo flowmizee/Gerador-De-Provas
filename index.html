@@ -8,15 +8,6 @@
   <style>
     /* Pequeno ajuste para o cabeçalho sticky da tabela */
     #contacts-table thead th { backdrop-filter: blur(4px); }
-    /* Style for the table actions */
-    .table-action-btn {
-      opacity: 0.6;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-    .table-action-btn:hover {
-      opacity: 1;
-      transform: scale(1.1);
-    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-200 min-h-screen p-6">
@@ -184,9 +175,7 @@
               <td class="p-3 align-top">${escapeHtml(contact.type)}</td>
               <td class="p-3 align-top">${escapeHtml(contact.city)}</td>
               <td class="p-3 text-center align-top">
-                <button class="delete-btn table-action-btn text-red-400" data-index="${index}" title="Remover contato">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
+                <button class="delete-btn inline-block px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-white text-sm" data-index="${index}">Excluir</button>
               </td>
             `;
             tableBody.appendChild(tr);
@@ -493,3 +482,5 @@
   </script>
 </body>
 </html>
+
+
