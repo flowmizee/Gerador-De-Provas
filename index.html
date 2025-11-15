@@ -59,7 +59,7 @@
           <!-- Área de Texto para Dados Brutos -->
           <div>
             <label for="raw-data" class="block text-sm font-medium text-slate-300 mb-2">Dados Brutos (Cole aqui)</label>
-            <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...&#10;Pode colar vários estabelecimentos de uma vez.&#10;O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
+            <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...&#10;Pode colar vários estabelecimentos de uma vez.&#10;O app tentará separá-los usando 'Sobre esses dados' como divisor.&#10;&#10;Também aceita listas simples como:&#10;Rancho Burger: +55 86 99934-5970&#10;Amarante Burguer: +55 86 99570-1863&#10;NA BRASA AMARANTE: +55 86 99530-5760"></textarea>
           </div>
 
           <!-- Botão de Processar -->
@@ -145,6 +145,9 @@
 
       // Regex para verificar se a linha começa com uma nota (ex: "4,4" ou "4.4" ou "4")
       const ratingRegex = /^(\d([,.]\d)?|\d{2})$/;
+
+      // Regex para detectar linhas simples no formato "Nome: telefone"
+      const simpleContactRegex = /^([^:\n]+?)\s*[:\-–]\s*(.+)$/;
 
       // --- Funções ---
       /**
@@ -270,7 +273,7 @@
         if (!phoneMatch) return null;
 
         // Se houver dois grupos (ex: "Nome: numero"), tenta usar separador
-        const sepMatch = trimmed.match(/^(.{1,120}?)\s*[:\-–]\s*(.+)$/);
+        const sepMatch = trimmed.match(simpleContactRegex);
         if (sepMatch) {
           const maybeName = sepMatch[1].trim();
           const maybePhonePart = sepMatch[2].trim();
@@ -354,6 +357,30 @@
       }
 
       /**
+       * Detecta se o texto é uma lista simples de contatos (formato "Nome: telefone")
+       * @param {string} text - O texto a ser analisado
+       * @returns {boolean} - True se parece ser uma lista simples
+       */
+      function isSimpleContactList(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
+        if (lines.length < 2) return false;
+        
+        let contactLines = 0;
+        let totalLines = 0;
+        
+        for (let line of lines) {
+          if (line.trim() === '') continue;
+          totalLines++;
+          if (parseShortLine(line)) {
+            contactLines++;
+          }
+        }
+        
+        // Considera como lista simples se pelo menos 50% das linhas são contatos válidos
+        return totalLines > 0 && (contactLines / totalLines) >= 0.5;
+      }
+
+      /**
        * Lida com o envio do formulário (botão "Processar").
        * Processa múltiplos blocos separados por "Sobre esses dados".
        */
@@ -381,49 +408,87 @@
         }
 
         // --- LÓGICA DE PROCESSAMENTO EM LOTE ---
-        // 1. Divide o texto bruto em blocos usando "Sobre esses dados" como divisor
-        const blocosDeTexto = rawText.split('Sobre esses dados');
         let contatosAdicionados = 0;
 
-        // 2. Itera sobre cada bloco
-        blocosDeTexto.forEach(bloco => {
-          if (bloco.trim().length < 3) return; // Ignora blocos pequenos ou vazios
-
-          // Se o bloco contém múltiplas linhas no estilo curto (Nome: numero) vamos processar linha a linha
-          const linhas = bloco.split('\n').map(l => l.trim()).filter(l => l !== '');
-
-          // Se o bloco parecer conter várias linhas do tipo curto (ex: mais da metade das linhas contém telefone), itera as linhas
-          const linesWithPhone = linhas.filter(l => phoneRegex.test(l));
-
-          // REMOVIDO O LIMITE DE LINHAS - agora processa qualquer quantidade
-          if (linesWithPhone.length >= 1) {
-            // Para blocos curtos, processa cada linha isoladamente — isso permite colar listas simples como no exemplo
-            linhas.forEach(line => {
-              const short = parseShortLine(line);
-              if (short) {
-                const { name, number } = short;
-                if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
-                  extractedContacts.push({ name: name, number: formatPhoneNumber(number), type: tipo, city: cidade });
-                  contatosAdicionados++;
-                }
-              } else {
-                // Se não for linha curta, tenta parsear como bloco inteiro
-                const parsed = parseData(line);
-                if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
-                  extractedContacts.push({ name: parsed.name, number: parsed.number, type: tipo, city: cidade });
-                  contatosAdicionados++;
-                }
+        // Verifica se é uma lista simples de contatos
+        if (isSimpleContactList(rawText)) {
+          // Processa como lista simples
+          const lines = rawText.split('\n').map(l => l.trim()).filter(l => l !== '');
+          
+          lines.forEach(line => {
+            const short = parseShortLine(line);
+            if (short) {
+              const { name, number } = short;
+              if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
+                extractedContacts.push({ 
+                  name: name, 
+                  number: formatPhoneNumber(number), 
+                  type: tipo, 
+                  city: cidade 
+                });
+                contatosAdicionados++;
               }
-            });
-          } else {
-            // Processa o bloco inteiro com a lógica existente
-            const { name, number } = parseData(bloco);
-            if (name !== 'Não encontrado' || number !== 'Não encontrado') {
-              extractedContacts.push({ name: name, number: number, type: tipo, city: cidade });
-              contatosAdicionados++;
             }
-          }
-        });
+          });
+        } else {
+          // Processa como blocos do Google Maps
+          // 1. Divide o texto bruto em blocos usando "Sobre esses dados" como divisor
+          const blocosDeTexto = rawText.split('Sobre esses dados');
+          
+          // 2. Itera sobre cada bloco
+          blocosDeTexto.forEach(bloco => {
+            if (bloco.trim().length < 3) return; // Ignora blocos pequenos ou vazios
+
+            // Se o bloco contém múltiplas linhas no estilo curto (Nome: numero) vamos processar linha a linha
+            const linhas = bloco.split('\n').map(l => l.trim()).filter(l => l !== '');
+
+            // Se o bloco parecer conter várias linhas do tipo curto, itera as linhas
+            const linesWithPhone = linhas.filter(l => phoneRegex.test(l));
+
+            if (linesWithPhone.length >= 1) {
+              // Para blocos curtos, processa cada linha isoladamente — isso permite colar listas simples como no exemplo
+              linhas.forEach(line => {
+                const short = parseShortLine(line);
+                if (short) {
+                  const { name, number } = short;
+                  if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
+                    extractedContacts.push({ 
+                      name: name, 
+                      number: formatPhoneNumber(number), 
+                      type: tipo, 
+                      city: cidade 
+                    });
+                    contatosAdicionados++;
+                  }
+                } else {
+                  // Se não for linha curta, tenta parsear como bloco inteiro
+                  const parsed = parseData(line);
+                  if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
+                    extractedContacts.push({ 
+                      name: parsed.name, 
+                      number: parsed.number, 
+                      type: tipo, 
+                      city: cidade 
+                    });
+                    contatosAdicionados++;
+                  }
+                }
+              });
+            } else {
+              // Processa o bloco inteiro com a lógica existente
+              const { name, number } = parseData(bloco);
+              if (name !== 'Não encontrado' || number !== 'Não encontrado') {
+                extractedContacts.push({ 
+                  name: name, 
+                  number: number, 
+                  type: tipo, 
+                  city: cidade 
+                });
+                contatosAdicionados++;
+              }
+            }
+          });
+        }
 
         // 5. Feedback final e atualização da UI
         if (contatosAdicionados > 0) {
