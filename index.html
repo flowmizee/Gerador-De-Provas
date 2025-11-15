@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
@@ -8,6 +8,15 @@
   <style>
     /* Pequeno ajuste para o cabeçalho sticky da tabela */
     #contacts-table thead th { backdrop-filter: blur(4px); }
+    /* Style for the table actions */
+    .table-action-btn {
+      opacity: 0.6;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .table-action-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-200 min-h-screen p-6">
@@ -15,7 +24,7 @@
   <div id="toast" class="fixed top-5 right-5 bg-cyan-600 text-white py-2 px-5 rounded-lg shadow-lg hidden transition-all duration-300 z-50">
     <span id="toast-message"></span>
   </div>
-
+  
   <div class="max-w-7xl mx-auto">
     <!-- Cabeçalho -->
     <header class="mb-8">
@@ -128,7 +137,7 @@
 
       // --- Expressões Regulares (RegEx) ---
       // Phone regex mais permissiva para capturar vários formatos
-      const phoneRegex = /(?:\+?55\s*)?(?:\(?\d{2}\)?[\s.-]*)?(?:9?\d{4}[\s.-]*\d{4}|\d{4}[\s.-]*\d{4})/g;
+      const phoneRegex = /(?:\+?55\s*)?(?:?\d{2}?[\s.-]*)?(?:9?\d{4}[\s.-]*\d{4}|\d{4}[\s.-]*\d{4})/g;
 
       // Lixo comum encontrado no topo do texto colado
       const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Street View|Resumo de avaliações|R\.|Av\.|Avenida|Travessa|Alameda|Praça|Largo|Vila|Bairro|Centro|Zona|Rod\.|Rodovia|BR-|Estrada)$/i;
@@ -170,12 +179,14 @@
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-700/50 transition duration-150';
             tr.innerHTML = `
-              <td class="p-3 align-top">${escapeHtml(contact.name)}</td>
-              <td class="p-3 align-top">${escapeHtml(contact.number)}</td>
-              <td class="p-3 align-top">${escapeHtml(contact.type)}</td>
-              <td class="p-3 align-top">${escapeHtml(contact.city)}</td>
-              <td class="p-3 text-center align-top">
-                <button class="delete-btn inline-block px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-white text-sm" data-index="${index}">Excluir</button>
+              <td class="p-3 text-sm text-white">${escapeHtml(contact.name)}</td>
+              <td class="p-3 text-sm text-slate-300">${escapeHtml(contact.number)}</td>
+              <td class="p-3 text-sm text-slate-300">${escapeHtml(contact.type)}</td>
+              <td class="p-3 text-sm text-slate-300">${escapeHtml(contact.city)}</td>
+              <td class="p-3 text-center">
+                <button class="delete-btn table-action-btn text-red-400" data-index="${index}" title="Remover contato">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
               </td>
             `;
             tableBody.appendChild(tr);
@@ -325,7 +336,7 @@
               name = first;
             } else {
               // tenta extrair texto antes do telefone
-              const match = first.match(/^(.*?)\s*(?:\+?55|\(?\d{2}\)?)/);
+              const match = first.match(/^(.*?)\s*(?:\+?55|?\d{2}?)/);
               if (match && match[1] && match[1].trim().length > 1) {
                 name = match[1].trim();
               }
