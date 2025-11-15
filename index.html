@@ -66,7 +66,7 @@
             <label for="raw-data" class="block text-sm font-medium text-slate-300 mb-2">Dados Brutos (Cole aqui)</label>
             <textarea id="raw-data" name="raw-data" rows="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Cole o bloco de texto copiado do Google Maps aqui...
 Pode colar vários estabelecimentos de uma vez.
-O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
+O app separa automaticamente usando 'Sobre esses dados' como divisor."></textarea>
           </div>
 
           <!-- Botão de Processar -->
@@ -165,20 +165,12 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
       let toastTimeout;
 
       // --- Expressões Regulares (RegEx) ---
-      // Phone regex mais permissiva para capturar vários formatos
       const phoneRegex = /(?:\+?55[\s-]?)?(?:\(?\d{2}\)?[\s.-]*)?(?:9?\d{4}[\s.-]*\d{4}|\d{4}[\s.-]*\d{4})/g;
 
-      // Lixo comum encontrado no topo do texto colado
       const junkRegex = /^(Abrir app|Seu local||||Fotos|Foto|Street View|Resumo de avaliações|R\.|Av\.|Avenida|Travessa|Alameda|Praça|Largo|Vila|Bairro|Centro|Zona|Rod\.|Rodovia|BR-|Estrada|#)$/i;
 
-      // Regex para verificar se a linha é basicamente uma nota (ex: "4,4" ou "4.4" ou "4" ou "40")
       const ratingRegex = /^(\d{1,2}([,.]\d)?|\d{1,3}([,.]\d{1,2})?)$/;
 
-      // --- Funções ---
-
-      /**
-       * Mostra uma notificação toast (sem usar alert())
-       */
       function showToast(message, type = 'success') {
         clearTimeout(toastTimeout);
         toastMessage.textContent = message;
@@ -195,9 +187,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         }, 3000);
       }
 
-      /**
-       * Renderiza a tabela de contatos a partir do estado extractedContacts.
-       */
       function renderTable() {
         tableBody.innerHTML = '';
         if (extractedContacts.length === 0) {
@@ -231,9 +220,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         }
       }
 
-      /**
-       * Escapa HTML simples para evitar quebra da tabela
-       */
       function escapeHtml(str) {
         if (!str && str !== 0) return '';
         return String(str)
@@ -244,18 +230,13 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           .replace(/'/g, '&#39;');
       }
 
-      /**
-       * Formata um número de telefone bruto para um padrão limpo.
-       */
       function formatPhoneNumber(rawNumber) {
         if (!rawNumber) return 'Não encontrado';
         let digits = rawNumber.replace(/\D/g, '');
 
         if (digits.length === 0) return 'Não encontrado';
 
-        // Ajustes comuns de formatos brasileiros
         if (digits.startsWith('55') && digits.length >= 12) {
-          // +55 DDD 9XXXX-XXXX  (se rest tiver 11)
           const rest = digits.substring(2);
           if (rest.length === 11) {
             return '+' + digits.substring(0,2) + ' ' + rest.substring(0,2) + ' ' + rest.substring(2,7) + '-' + rest.substring(7);
@@ -265,7 +246,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         }
 
         if (digits.length === 11) {
-          // assume DDD + 9 + 8 dígitos -> +55 DDD 9XXXX-XXXX
           const with55 = '55' + digits;
           return '+' + with55.substring(0,2) + ' ' + with55.substring(2,4) + ' ' + with55.substring(4,9) + '-' + with55.substring(9);
         } else if (digits.length === 10) {
@@ -282,12 +262,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         return rawNumber.trim();
       }
 
-      /**
-       * Tenta interpretar linhas simples no formato:
-       * Nome: +55 86 99934-5970
-       * ou "Nome - telefone" ou mesmo "Nome ... telefone".
-       * Retorna {name, number} ou null se não for esse caso.
-       */
       function parseShortLine(line) {
         const trimmed = line.trim();
         if (!trimmed) return null;
@@ -317,11 +291,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         return null;
       }
 
-      /**
-       * Tenta extrair o nome e o telefone de um *único bloco* de texto (página de estabelecimento).
-       * Nome = linha imediatamente anterior à que contém "avalia" (ex: "4,2 10 avaliações").
-       */
-      function parseData(text) {
+      function parseData(text, tipoCampo, cidadeCampo) {
         let name = 'Não encontrado';
         let number = 'Não encontrado';
 
@@ -335,7 +305,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           .map(l => l.trim())
           .filter(line => line !== '');
 
-        // 0) Tenta detectar linhas simples "Nome: telefone" no bloco inteiro
+        // 0) Tenta primeiro o formato simples "Nome: telefone" dentro do bloco
         for (let l of lines) {
           const short = parseShortLine(l);
           if (short) {
@@ -345,7 +315,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           }
         }
 
-        // 1) Nome: linha anterior à que contém "avalia" (primeira ocorrência dentro do bloco)
+        // 1) Nome: linha imediatamente anterior à primeira ocorrência de "avalia" dentro do bloco
         const avalIndex = lines.findIndex(l => l.toLowerCase().includes('avalia'));
         if (avalIndex > 0) {
           for (let i = avalIndex - 1; i >= 0; i--) {
@@ -355,12 +325,13 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
               candidate.length > 1 &&
               !junkRegex.test(candidate) &&
               !ratingRegex.test(candidate) &&
-              candidate.toLowerCase() !== tipoInput.value.toLowerCase() &&
+              candidate.toLowerCase() !== (tipoCampo || '').toLowerCase() &&
               !candidate.toLowerCase().includes('rotas') &&
               !candidate.toLowerCase().includes('iniciar') &&
               !candidate.toLowerCase().includes('ligar') &&
               !candidate.toLowerCase().includes('salvar') &&
-              !candidate.toLowerCase().includes('compartilhar')
+              !candidate.toLowerCase().includes('compartilhar') &&
+              !candidate.toLowerCase().includes('lugares também pesquisados')
             ) {
               name = candidate;
               break;
@@ -374,7 +345,7 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           number = formatPhoneNumber(phoneMatch[0]);
         }
 
-        // 3) Plano B pro nome: tenta primeira linha, se ainda não achou
+        // 3) Plano B pro nome: tenta primeira linha do bloco
         if (name === 'Não encontrado' && lines.length > 0) {
           const first = lines[0];
           if (first && !junkRegex.test(first) && !ratingRegex.test(first) && first.length > 1) {
@@ -392,15 +363,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         return { name, number };
       }
 
-      /**
-       * Lida com o envio do formulário (botão "Processar").
-       * Ajuste solicitado: se o texto inteiro contiver UMA ocorrência de "avalia" próxima ao início
-       * (como seu exemplo), então trata TODO o input como UMA PÁGINA DO MAPS e gera APENAS 1 contato:
-       * - nome = linha imediatamente anterior à PRIMEIRA linha que contém 'avalia'
-       * - número = PRIMEIRO número válido encontrado no texto (formatado)
-       *
-       * Caso contrário, permanece a lógica anterior (dividir por "Sobre esses dados" e processar).
-       */
       function handleFormSubmit(e) {
         e.preventDefault();
         const rawTextOriginal = rawDataInput.value;
@@ -424,86 +386,73 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
           return;
         }
 
-        // Normaliza texto completo para análise global
         const normalizedRaw = rawText
           .replace(/\r/g, '\n')
           .replace(/\u00A0/g, ' ')
           .replace(/\n{2,}/g, '\n\n');
 
-        const allLines = normalizedRaw
-          .split('\n')
-          .map(l => l.trim())
-          .filter(l => l !== '');
-
-        // Procura pela PRIMEIRA ocorrência de "avalia" em todo o texto
-        const globalAvalIndex = allLines.findIndex(l => l.toLowerCase().includes('avalia'));
-
-        // Se houver uma ocorrência de "avalia" e ela estiver relativamente no início (ex.: dentro das primeiras 25 linhas)
-        // então aplicamos a regra rígida: contar APENAS 1 contato no input inteiro.
-        const isGlobalMapsTop = (globalAvalIndex > 0 && globalAvalIndex <= 25);
-
+        // SEM "modo global": SEMPRE divide por "Sobre esses dados"
+        const blocosDeTexto = normalizedRaw.split('Sobre esses dados');
         let contatosAdicionados = 0;
 
-        if (isGlobalMapsTop) {
-          // Pega o nome: a linha imediatamente anterior à primeira "avalia"
-          let name = 'Não encontrado';
-          for (let i = globalAvalIndex - 1; i >= 0; i--) {
-            const candidate = allLines[i];
-            if (
-              candidate &&
-              candidate.length > 1 &&
-              !junkRegex.test(candidate) &&
-              !ratingRegex.test(candidate) &&
-              candidate.toLowerCase() !== tipo.toLowerCase() &&
-              !candidate.toLowerCase().includes('rotas') &&
-              !candidate.toLowerCase().includes('iniciar') &&
-              !candidate.toLowerCase().includes('ligar') &&
-              !candidate.toLowerCase().includes('salvar') &&
-              !candidate.toLowerCase().includes('compartilhar')
-            ) {
-              name = candidate;
-              break;
+        blocosDeTexto.forEach(bloco => {
+          if (bloco.trim().length < 3) return;
+
+          const normalizedBlock = bloco.replace(/\r/g, '\n').replace(/\u00A0/g, ' ');
+          const linhas = normalizedBlock
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l !== '');
+
+          const isMapsPage =
+            normalizedBlock.toLowerCase().includes('avalia') ||
+            normalizedBlock.toLowerCase().includes('resumo de avaliações');
+
+          if (isMapsPage) {
+            // 1 contato por página
+            const parsed = parseData(normalizedBlock, tipo, cidade);
+            if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
+              extractedContacts.push({
+                name: parsed.name,
+                number: parsed.number,
+                type: tipo,
+                city: cidade
+              });
+              contatosAdicionados++;
             }
-          }
+          } else {
+            // Lista simples: Nome: telefone, etc.
+            const linesWithPhone = linhas.filter(l => phoneRegex.test(l));
 
-          // Pega o primeiro telefone válido em todo o texto (pelo regex)
-          const phoneMatches = normalizedRaw.match(phoneRegex);
-          let number = 'Não encontrado';
-          if (phoneMatches && phoneMatches.length > 0) {
-            number = formatPhoneNumber(phoneMatches[0]);
-          }
-
-          // Se achou pelo menos nome (ou número), adiciona 1 contato apenas
-          if (name !== 'Não encontrado' || number !== 'Não encontrado') {
-            extractedContacts.push({
-              name: name,
-              number: number,
-              type: tipo,
-              city: cidade
-            });
-            contatosAdicionados++;
-          }
-
-        } else {
-          // Comportamento padrão: divide por "Sobre esses dados" e processa blocos
-          const blocosDeTexto = normalizedRaw.split('Sobre esses dados');
-
-          blocosDeTexto.forEach(bloco => {
-            if (bloco.trim().length < 3) return;
-
-            const normalizedBlock = bloco.replace(/\r/g, '\n').replace(/\u00A0/g, ' ');
-            const linhas = normalizedBlock
-              .split('\n')
-              .map(l => l.trim())
-              .filter(l => l !== '');
-
-            // Detecta se o bloco se parece com uma página do Maps
-            const isMapsPage = normalizedBlock.toLowerCase().includes('avalia') ||
-                               normalizedBlock.toLowerCase().includes('resumo de avaliações');
-
-            if (isMapsPage) {
-              // Trata como 1 estabelecimento por bloco
-              const parsed = parseData(normalizedBlock);
+            if (linesWithPhone.length >= 1) {
+              linhas.forEach(line => {
+                const short = parseShortLine(line);
+                if (short) {
+                  const { name, number } = short;
+                  if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
+                    extractedContacts.push({
+                      name: name,
+                      number: formatPhoneNumber(number),
+                      type: tipo,
+                      city: cidade
+                    });
+                    contatosAdicionados++;
+                  }
+                } else {
+                  const parsed = parseData(line, tipo, cidade);
+                  if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
+                    extractedContacts.push({
+                      name: parsed.name,
+                      number: parsed.number,
+                      type: tipo,
+                      city: cidade
+                    });
+                    contatosAdicionados++;
+                  }
+                }
+              });
+            } else {
+              const parsed = parseData(normalizedBlock, tipo, cidade);
               if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
                 extractedContacts.push({
                   name: parsed.name,
@@ -513,52 +462,9 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
                 });
                 contatosAdicionados++;
               }
-            } else {
-              // Caso NÃO seja uma página de Maps, mantemos a lógica de lista (Nome: Telefone, etc.)
-              const linesWithPhone = linhas.filter(l => phoneRegex.test(l));
-
-              if (linesWithPhone.length >= 1) {
-                linhas.forEach(line => {
-                  const short = parseShortLine(line);
-                  if (short) {
-                    const { name, number } = short;
-                    if ((name && name !== 'Não encontrado') || (number && number !== 'Não encontrado')) {
-                      extractedContacts.push({
-                        name: name,
-                        number: formatPhoneNumber(number),
-                        type: tipo,
-                        city: cidade
-                      });
-                      contatosAdicionados++;
-                    }
-                  } else {
-                    const parsed = parseData(line);
-                    if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
-                      extractedContacts.push({
-                        name: parsed.name,
-                        number: parsed.number,
-                        type: tipo,
-                        city: cidade
-                      });
-                      contatosAdicionados++;
-                    }
-                  }
-                });
-              } else {
-                const parsed = parseData(normalizedBlock);
-                if (parsed.name !== 'Não encontrado' || parsed.number !== 'Não encontrado') {
-                  extractedContacts.push({
-                    name: parsed.name,
-                    number: parsed.number,
-                    type: tipo,
-                    city: cidade
-                  });
-                  contatosAdicionados++;
-                }
-              }
             }
-          });
-        }
+          }
+        });
 
         if (contatosAdicionados > 0) {
           renderTable();
@@ -569,9 +475,6 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         }
       }
 
-      /**
-       * Lida com o clique no botão "Exportar CSV".
-       */
       function handleExportCSV() {
         if (extractedContacts.length === 0) {
           showToast('Não há dados para exportar.', 'error');
@@ -596,18 +499,12 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         showToast('CSV exportado com sucesso!', 'success');
       }
 
-      /**
-       * Lida com o clique no botão "Limpar Lista".
-       */
       function handleClearList() {
         extractedContacts = [];
         renderTable();
         showToast('Lista de contatos limpa.', 'success');
       }
 
-      /**
-       * Lida com cliques na tabela (para exclusão de linhas).
-       */
       function handleTableClick(e) {
         const deleteButton = e.target.closest('.delete-btn');
         if (deleteButton) {
@@ -620,13 +517,11 @@ O app tentará separá-los usando 'Sobre esses dados' como divisor."></textarea>
         }
       }
 
-      // --- Adiciona os Event Listeners ---
       form.addEventListener('submit', handleFormSubmit);
       exportBtn.addEventListener('click', handleExportCSV);
       clearBtn.addEventListener('click', handleClearList);
       tableBody.addEventListener('click', handleTableClick);
 
-      // Inicializa a tabela no estado vazio
       renderTable();
     });
   </script>
