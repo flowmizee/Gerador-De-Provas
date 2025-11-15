@@ -8,6 +8,16 @@
   <style>
     /* Pequeno ajuste para o cabeçalho sticky da tabela */
     #contacts-table thead th { backdrop-filter: blur(4px); }
+    
+    /* Estilo personalizado para o botão de lixeira */
+    .delete-btn {
+      border: 1px solid #ef4444;
+      transition: all 0.2s ease;
+    }
+    .delete-btn:hover {
+      background-color: #ef4444;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-200 min-h-screen p-6">
@@ -175,7 +185,14 @@
               <td class="p-3 align-top">${escapeHtml(contact.type)}</td>
               <td class="p-3 align-top">${escapeHtml(contact.city)}</td>
               <td class="p-3 text-center align-top">
-                <button class="delete-btn inline-block px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-white text-sm" data-index="${index}">Excluir</button>
+                <button class="delete-btn inline-flex items-center justify-center p-2 bg-transparent text-red-500 hover:text-white rounded-lg cursor-pointer" data-index="${index}" title="Excluir contato">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
               </td>
             `;
             tableBody.appendChild(tr);
